@@ -1470,6 +1470,15 @@ define('modules/uv-shared-module/BaseExtension',["require", "exports", "./BaseCo
             p.canvasIndex = 0;
             this.provider.reload(p);
         };
+        BaseExtension.prototype.viewCollection = function (collection) {
+            var p = new BootstrapParams();
+            p.manifestUri = this.provider.manifestUri;
+            p.collectionIndex = collection.index;
+            p.manifestIndex = 0;
+            p.sequenceIndex = 0;
+            p.canvasIndex = 0;
+            this.provider.reload(p);
+        };
         BaseExtension.prototype.isFullScreen = function () {
             return this.bootstrapper.isFullScreen;
         };
@@ -3834,7 +3843,7 @@ define('modules/uv-contentleftpanel-module/TreeView',["require", "exports", "../
                         }).on('click', 'a', function (e) {
                             e.preventDefault();
                             if (self.data.nodes.length)
-                                self.toggle();
+                                self.toggleExpanded();
                             $.publish(Commands.TREE_NODE_SELECTED, [self.data.data]);
                         }).on('click', 'input.multiSelect', function (e) {
                             self.toggleMultiSelect();
@@ -3952,6 +3961,7 @@ define('modules/uv-contentleftpanel-module/ContentLeftPanel',["require", "export
         __extends(ContentLeftPanel, _super);
         function ContentLeftPanel($element) {
             _super.call(this, $element);
+            this.multiSelectionMode = false;
         }
         ContentLeftPanel.prototype.create = function () {
             var _this = this;
@@ -3970,19 +3980,24 @@ define('modules/uv-contentleftpanel-module/ContentLeftPanel',["require", "export
                 }
                 _this.selectCurrentTreeNode();
             });
-            $.subscribe(Commands.ENTER_MULTI_SELECTION_MODE, function () {
+            $.subscribe(Commands.ENTER_MULTI_SELECTION_MODE, function (s, e) {
+                that.multiSelectionMode = true;
                 that.setTitle(that.content.selection);
                 if (!that.isFullyExpanded) {
                     that.expandFull();
                 }
-                _this.$selectButton.show();
+                _this.$multiSelectOptions.show();
+                _this.$selectButton.text(e);
             });
             $.subscribe(Commands.EXIT_MULTI_SELECTION_MODE, function () {
+                that.multiSelectionMode = false;
                 that.setTitle(that.content.title);
-                _this.$selectButton.hide();
+                _this.$multiSelectOptions.hide();
             });
-            $.subscribe(BaseCommands.LEFTPANEL_COLLAPSE_FULL_FINISH, function () {
-                $.publish(Commands.EXIT_MULTI_SELECTION_MODE);
+            $.subscribe(BaseCommands.LEFTPANEL_COLLAPSE_FULL_START, function () {
+                if (_this.multiSelectionMode) {
+                    $.publish(Commands.EXIT_MULTI_SELECTION_MODE);
+                }
             });
             this.$tabs = $('<div class="tabs"></div>');
             this.$main.append(this.$tabs);
@@ -4000,18 +4015,22 @@ define('modules/uv-contentleftpanel-module/ContentLeftPanel',["require", "export
             this.$options.append(this.$leftOptions);
             this.$rightOptions = $('<div class="right"></div>');
             this.$options.append(this.$rightOptions);
-            this.$selectButton = $('<a class="btn btn-primary">' + this.content.select + '</a>');
-            this.$rightOptions.append(this.$selectButton);
             this.$treeViewOptions = $('<div class="treeView"></div>');
-            this.$options.append(this.$treeViewOptions);
+            this.$leftOptions.append(this.$treeViewOptions);
             this.$sortByLabel = $('<span class="sort">' + this.content.sortBy + '</span>');
             this.$treeViewOptions.append(this.$sortByLabel);
-            this.$buttonGroup = $('<div class="btn-group"></div>');
-            this.$treeViewOptions.append(this.$buttonGroup);
+            this.$sortButtonGroup = $('<div class="btn-group"></div>');
+            this.$treeViewOptions.append(this.$sortButtonGroup);
             this.$sortByDateButton = $('<button class="btn">' + this.content.date + '</button>');
-            this.$buttonGroup.append(this.$sortByDateButton);
+            this.$sortButtonGroup.append(this.$sortByDateButton);
             this.$sortByVolumeButton = $('<button class="btn">' + this.content.volume + '</button>');
-            this.$buttonGroup.append(this.$sortByVolumeButton);
+            this.$sortButtonGroup.append(this.$sortByVolumeButton);
+            this.$multiSelectOptions = $('<div class="multiSelect"></div>');
+            this.$rightOptions.append(this.$multiSelectOptions);
+            this.$selectAllButton = $('<input id="multiSelectAll" type="checkbox" /><label for="multiSelectAll">' + this.content.selectAll + '</label>');
+            this.$multiSelectOptions.append(this.$selectAllButton);
+            this.$selectButton = $('<a class="btn btn-primary">' + this.content.select + '</a>');
+            this.$multiSelectOptions.append(this.$selectButton);
             this.$views = $('<div class="views"></div>');
             this.$tabsContent.append(this.$views);
             this.$treeView = $('<div class="treeView"></div>');
@@ -4020,7 +4039,7 @@ define('modules/uv-contentleftpanel-module/ContentLeftPanel',["require", "export
             this.$views.append(this.$thumbsView);
             this.$galleryView = $('<div class="galleryView"></div>');
             this.$views.append(this.$galleryView);
-            this.$selectButton.hide();
+            this.$multiSelectOptions.hide();
             this.$sortByDateButton.on('click', function () {
                 _this.sortByDate();
             });
@@ -4038,9 +4057,9 @@ define('modules/uv-contentleftpanel-module/ContentLeftPanel',["require", "export
             });
             this.$selectButton.on('click', function () {
                 var selectedNodes = _this.treeView.getMultiSelectedNodes();
-                var ids = _.map(selectedNodes, function (node) {
+                var ids = _.without(_.map(selectedNodes, function (node) {
                     return node.data.id;
-                });
+                }), undefined);
                 $.publish(Commands.MULTI_SELECTION, [ids]);
             });
             this.$expandButton.attr('tabindex', '7');
@@ -4269,7 +4288,7 @@ define('modules/uv-contentleftpanel-module/ContentLeftPanel',["require", "export
         ContentLeftPanel.prototype.resize = function () {
             _super.prototype.resize.call(this);
             this.$tabsContent.height(this.$main.height() - (this.$tabs.is(':visible') ? this.$tabs.height() : 0) - this.$tabsContent.verticalPadding());
-            this.$views.height(this.$tabsContent.height() - this.$options.height());
+            this.$views.height(this.$tabsContent.height() - this.$options.outerHeight());
         };
         return ContentLeftPanel;
     })(LeftPanel);
@@ -4449,7 +4468,11 @@ define('modules/uv-shared-module/BaseProvider',["require", "exports", "../../Boo
         };
         BaseProvider.prototype.getCollectionIndex = function (iiifResource) {
             // todo: support nested collections. walk up parents adding to array and return csv string.
-            return iiifResource.parentCollection.index;
+            var index;
+            if (iiifResource.parentCollection) {
+                index = iiifResource.parentCollection.index;
+            }
+            return index;
         };
         BaseProvider.prototype.getManifestType = function () {
             var manifestType = this.manifest.getManifestType();
@@ -5184,7 +5207,7 @@ define('extensions/uv-seadragon-extension/DownloadDialogue',["require", "exports
                             $.publish(Commands.DOWNLOAD_CURRENTVIEW);
                             break;
                         case DownloadOption.selection.toString():
-                            $.publish(Commands.ENTER_MULTI_SELECTION_MODE);
+                            $.publish(Commands.ENTER_MULTI_SELECTION_MODE, [_this.content.downloadSelectionButton]);
                             break;
                         case DownloadOption.wholeImageHighRes.toString():
                             window.open(_this.getOriginalImageForCurrentCanvas());
@@ -7244,11 +7267,16 @@ define('extensions/uv-seadragon-extension/Extension',["require", "exports", "../
         Extension.prototype.treeNodeSelected = function (data) {
             if (!data.type)
                 return;
-            if (data.type === 'manifest') {
-                this.viewManifest(data);
-            }
-            else {
-                this.viewRange(data.path);
+            switch (data.type) {
+                case manifesto.IIIFResourceType.manifest().toString():
+                    this.viewManifest(data);
+                    break;
+                case manifesto.IIIFResourceType.collection().toString():
+                    this.viewCollection(data);
+                    break;
+                default:
+                    this.viewRange(data.path);
+                    break;
             }
         };
         Extension.prototype.searchWithin = function (terms) {
@@ -9564,9 +9592,9 @@ var Manifesto;
         TreeNodeType.prototype.range = function () {
             return new TreeNodeType(TreeNodeType.RANGE.toString());
         };
-        TreeNodeType.COLLECTION = new TreeNodeType("collection");
-        TreeNodeType.MANIFEST = new TreeNodeType("manifest");
-        TreeNodeType.RANGE = new TreeNodeType("range");
+        TreeNodeType.COLLECTION = new TreeNodeType("sc:collection");
+        TreeNodeType.MANIFEST = new TreeNodeType("sc:manifest");
+        TreeNodeType.RANGE = new TreeNodeType("sc:range");
         return TreeNodeType;
     })(Manifesto.StringValue);
     Manifesto.TreeNodeType = TreeNodeType;

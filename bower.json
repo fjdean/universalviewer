@@ -25,8 +25,8 @@
     "lodash-compat": "~3.10.0",
     "r.js": "~2.1.18",
     "utils": "edsilv/utils",
-    "uv-cy-GB-theme": "universalviewer/uv-cy-GB-theme",
-    "uv-en-GB-theme": "universalviewer/uv-en-GB-theme",
+    "uv-cy-GB-theme": "britishlibrary/uv-cy-GB-theme",
+    "uv-en-GB-theme": "britishlibrary/uv-en-GB-theme",
     "exjs": "~0.3.0"
   }
 }
