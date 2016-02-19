@@ -3067,7 +3067,7 @@ define('modules/uv-moreinforightpanel-module/MoreInfoRightPanel',["require", "ex
 });
 
 define('_Version',["require", "exports"], function (require, exports) {
-    exports.Version = '1.7.1';
+    exports.Version = '1.7.2';
 });
 
 var __extends = (this && this.__extends) || function (d, b) {
@@ -4883,19 +4883,6 @@ define('modules/uv-shared-module/BaseProvider',["require", "exports", "../../Boo
         BaseProvider.prototype.isMultiCanvas = function () {
             return this.getCurrentSequence().isMultiCanvas();
         };
-        BaseProvider.prototype.isPagingAvailable = function () {
-            // paged mode is useless unless you have at least 3 pages...
-            return this.isPagingEnabled() && this.getTotalCanvases() > 2;
-        };
-        BaseProvider.prototype.isPagingEnabled = function () {
-            return this.getCurrentSequence().isPagingEnabled();
-        };
-        BaseProvider.prototype.isPagingSettingEnabled = function () {
-            if (this.isPagingAvailable()) {
-                return this.getSettings().pagingEnabled;
-            }
-            return false;
-        };
         BaseProvider.prototype.getInfoUri = function (canvas) {
             // default to IxIF
             var service = canvas.getService(manifesto.ServiceProfile.ixif());
@@ -4929,45 +4916,6 @@ define('modules/uv-shared-module/BaseProvider',["require", "exports", "../../Boo
         };
         BaseProvider.prototype.getLastPageIndex = function () {
             return this.getTotalCanvases() - 1;
-        };
-        BaseProvider.prototype.getPrevPageIndex = function (canvasIndex) {
-            if (typeof (canvasIndex) === 'undefined')
-                canvasIndex = this.canvasIndex;
-            var index;
-            if (this.isPagingSettingEnabled()) {
-                var indices = this.getPagedIndices(canvasIndex);
-                if (this.getViewingDirection().toString() === manifesto.ViewingDirection.rightToLeft().toString()) {
-                    index = indices.last() - 1;
-                }
-                else {
-                    index = indices[0] - 1;
-                }
-            }
-            else {
-                index = canvasIndex - 1;
-            }
-            return index;
-        };
-        BaseProvider.prototype.getNextPageIndex = function (canvasIndex) {
-            if (typeof (canvasIndex) === 'undefined')
-                canvasIndex = this.canvasIndex;
-            var index;
-            if (this.isPagingSettingEnabled()) {
-                var indices = this.getPagedIndices(canvasIndex);
-                if (this.getViewingDirection().toString() === manifesto.ViewingDirection.rightToLeft().toString()) {
-                    index = indices[0] + 1;
-                }
-                else {
-                    index = indices.last() + 1;
-                }
-            }
-            else {
-                index = canvasIndex + 1;
-            }
-            if (index > this.getTotalCanvases() - 1) {
-                return -1;
-            }
-            return index;
         };
         BaseProvider.prototype.getStartCanvasIndex = function () {
             return this.getCurrentSequence().getStartCanvasIndex();
@@ -6968,14 +6916,13 @@ define('modules/uv-seadragoncenterpanel-module/SeadragonCenterPanel',["require",
             });
         };
         SeadragonCenterPanel.prototype.positionPages = function () {
-            var viewingDirection = this.provider.getViewingDirection().toString();
             var resources = this.provider.resources;
-            // if there's more than one image, align them next to each other.
+            // if there's more than one image, determine alignment strategy
             if (resources.length > 1) {
                 if (resources.length === 2) {
-                    // check if tilesources should be aligned horizontally or vertically
-                    if (viewingDirection === manifesto.ViewingDirection.topToBottom().toString() || viewingDirection === manifesto.ViewingDirection.bottomToTop().toString()) {
-                        // vertical
+                    // recto verso
+                    if (this.provider.isVerticallyAligned()) {
+                        // vertical alignment
                         var topPage = this.viewer.world.getItemAt(0);
                         var topPageBounds = topPage.getBounds(true);
                         var y = topPageBounds.y + topPageBounds.height;
@@ -6985,7 +6932,7 @@ define('modules/uv-seadragoncenterpanel-module/SeadragonCenterPanel',["require",
                         bottomPage.setPosition(bottomPagePos, true);
                     }
                     else {
-                        // horizontal
+                        // horizontal alignment
                         var leftPage = this.viewer.world.getItemAt(0);
                         var leftPageBounds = leftPage.getBounds(true);
                         var x = leftPageBounds.x + leftPageBounds.width;
@@ -6996,11 +6943,21 @@ define('modules/uv-seadragoncenterpanel-module/SeadragonCenterPanel',["require",
                     }
                 }
                 else {
-                    // a scroll
-                    if (viewingDirection === manifesto.ViewingDirection.topToBottom().toString() || viewingDirection === manifesto.ViewingDirection.bottomToTop().toString()) {
+                    // scroll
+                    if (this.provider.isVerticallyAligned()) {
+                        // vertical alignment
+                        for (var i = 0; i < resources.length - 1; i++) {
+                            var page = this.viewer.world.getItemAt(i);
+                            var pageBounds = page.getBounds(true);
+                            var y = pageBounds.y + pageBounds.height;
+                            var nextPage = this.viewer.world.getItemAt(i + 1);
+                            var nextPagePos = nextPage.getBounds(true).getTopLeft();
+                            nextPagePos.y = y;
+                            nextPage.setPosition(nextPagePos, true);
+                        }
                     }
                     else {
-                        // horizontal
+                        // horizontal alignment
                         for (var i = 0; i < resources.length - 1; i++) {
                             var page = this.viewer.world.getItemAt(i);
                             var pageBounds = page.getBounds(true);
@@ -7040,7 +6997,11 @@ define('modules/uv-seadragoncenterpanel-module/SeadragonCenterPanel',["require",
                     this.goHome();
                 }
             }
-            if (this.provider.isMultiCanvas()) {
+            if (this.provider.isContinuous()) {
+                this.hidePrevButton();
+                this.hideNextButton();
+            }
+            else if (this.provider.isMultiCanvas()) {
                 $('.navigator').addClass('extraMargin');
                 if (!this.provider.isFirstCanvas()) {
                     this.enablePrevButton();
@@ -7079,6 +7040,14 @@ define('modules/uv-seadragoncenterpanel-module/SeadragonCenterPanel',["require",
             this.prevButtonEnabled = true;
             this.$leftButton.removeClass('disabled');
         };
+        SeadragonCenterPanel.prototype.hidePrevButton = function () {
+            this.disablePrevButton();
+            this.$leftButton.hide();
+        };
+        SeadragonCenterPanel.prototype.showPrevButton = function () {
+            this.enablePrevButton();
+            this.$leftButton.show();
+        };
         SeadragonCenterPanel.prototype.disableNextButton = function () {
             this.nextButtonEnabled = false;
             this.$rightButton.addClass('disabled');
@@ -7086,6 +7055,14 @@ define('modules/uv-seadragoncenterpanel-module/SeadragonCenterPanel',["require",
         SeadragonCenterPanel.prototype.enableNextButton = function () {
             this.nextButtonEnabled = true;
             this.$rightButton.removeClass('disabled');
+        };
+        SeadragonCenterPanel.prototype.hideNextButton = function () {
+            this.disableNextButton();
+            this.$rightButton.hide();
+        };
+        SeadragonCenterPanel.prototype.showNextButton = function () {
+            this.enableNextButton();
+            this.$rightButton.show();
         };
         SeadragonCenterPanel.prototype.serialiseBounds = function (bounds) {
             return bounds.x + ',' + bounds.y + ',' + bounds.width + ',' + bounds.height;
@@ -7188,6 +7165,15 @@ define('modules/uv-seadragoncenterpanel-module/SeadragonCenterPanel',["require",
             if (this.provider.isMultiCanvas() && this.$leftButton && this.$rightButton) {
                 this.$leftButton.css('top', (this.$content.height() - this.$leftButton.height()) / 2);
                 this.$rightButton.css('top', (this.$content.height() - this.$rightButton.height()) / 2);
+            }
+            // stretch navigator
+            if (this.provider.isContinuous()) {
+                if (this.provider.isHorizontallyAligned()) {
+                    this.$navigator.width(this.$viewer.width() - this.$viewer.rightMargin());
+                }
+                else {
+                    this.$navigator.height(this.$viewer.height());
+                }
             }
         };
         SeadragonCenterPanel.prototype.setFocus = function () {
@@ -7902,12 +7888,30 @@ define('extensions/uv-seadragon-extension/Provider',["require", "exports", "../.
             var script = String.format(template, this.getSerializedLocales(), configUri, this.manifestUri, this.collectionIndex, this.manifestIndex, this.sequenceIndex, this.canvasIndex, zoom, rotation, width, height, this.embedScriptUri);
             return script;
         };
+        Provider.prototype.getPrevPageIndex = function (canvasIndex) {
+            if (_.isUndefined(canvasIndex))
+                canvasIndex = this.canvasIndex;
+            var index;
+            if (this.isPagingSettingEnabled()) {
+                var indices = this.getPagedIndices(canvasIndex);
+                if (this.isRightToLeft()) {
+                    index = indices.last() - 1;
+                }
+                else {
+                    index = indices[0] - 1;
+                }
+            }
+            else {
+                index = canvasIndex - 1;
+            }
+            return index;
+        };
         Provider.prototype.getPagedIndices = function (canvasIndex) {
             if (_.isUndefined(canvasIndex))
                 canvasIndex = this.canvasIndex;
             var indices = [];
             // if it's a continuous manifest, get all resources.
-            if (this.getViewingHint().toString() === manifesto.ViewingHint.continuous().toString()) {
+            if (this.isContinuous()) {
                 indices = _.map(this.getCanvases(), function (c, index) {
                     return index;
                 });
@@ -7926,7 +7930,7 @@ define('extensions/uv-seadragon-extension/Provider',["require", "exports", "../.
                     else {
                         indices = [canvasIndex - 1, canvasIndex];
                     }
-                    if (this.getViewingDirection().toString() === manifesto.ViewingDirection.rightToLeft().toString()) {
+                    if (this.isRightToLeft()) {
                         indices = indices.reverse();
                     }
                 }
@@ -7941,6 +7945,64 @@ define('extensions/uv-seadragon-extension/Provider',["require", "exports", "../.
                 return false;
             }
             return true;
+        };
+        Provider.prototype.isContinuous = function () {
+            return this.getViewingHint().toString() === manifesto.ViewingHint.continuous().toString();
+        };
+        Provider.prototype.isPaged = function () {
+            return this.getViewingHint().toString() === manifesto.ViewingHint.paged().toString();
+        };
+        Provider.prototype.isBottomToTop = function () {
+            return this.getViewingDirection().toString() === manifesto.ViewingDirection.bottomToTop().toString();
+        };
+        Provider.prototype.isTopToBottom = function () {
+            return this.getViewingDirection().toString() === manifesto.ViewingDirection.topToBottom().toString();
+        };
+        Provider.prototype.isLeftToRight = function () {
+            return this.getViewingDirection().toString() === manifesto.ViewingDirection.leftToRight().toString();
+        };
+        Provider.prototype.isRightToLeft = function () {
+            return this.getViewingDirection().toString() === manifesto.ViewingDirection.rightToLeft().toString();
+        };
+        Provider.prototype.isHorizontallyAligned = function () {
+            return this.isLeftToRight() || this.isRightToLeft();
+        };
+        Provider.prototype.isVerticallyAligned = function () {
+            return this.isTopToBottom() || this.isBottomToTop();
+        };
+        Provider.prototype.isPagingAvailable = function () {
+            // paged mode is useless unless you have at least 3 pages...
+            return this.isPagingEnabled() && this.getTotalCanvases() > 2;
+        };
+        Provider.prototype.isPagingEnabled = function () {
+            return this.getCurrentSequence().isPagingEnabled();
+        };
+        Provider.prototype.isPagingSettingEnabled = function () {
+            if (this.isPagingAvailable()) {
+                return this.getSettings().pagingEnabled;
+            }
+            return false;
+        };
+        Provider.prototype.getNextPageIndex = function (canvasIndex) {
+            if (_.isUndefined(canvasIndex))
+                canvasIndex = this.canvasIndex;
+            var index;
+            if (this.isPagingSettingEnabled()) {
+                var indices = this.getPagedIndices(canvasIndex);
+                if (this.isRightToLeft()) {
+                    index = indices[0] + 1;
+                }
+                else {
+                    index = indices.last() + 1;
+                }
+            }
+            else {
+                index = canvasIndex + 1;
+            }
+            if (index > this.getTotalCanvases() - 1) {
+                return -1;
+            }
+            return index;
         };
         Provider.prototype.getAutoCompleteService = function () {
             var service = this.getSearchWithinService();
@@ -21494,9 +21556,25 @@ define("modernizr", function(){});
         var $self = $(this);
         return parseInt($self.css('marginLeft')) + parseInt($self.css('marginRight'));
     };
+    $.fn.leftMargin = function () {
+        var $self = $(this);
+        return parseInt($self.css('marginLeft'));
+    };
+    $.fn.rightMargin = function () {
+        var $self = $(this);
+        return parseInt($self.css('marginRight'));
+    };
     $.fn.horizontalPadding = function () {
         var $self = $(this);
         return parseInt($self.css('paddingLeft')) + parseInt($self.css('paddingRight'));
+    };
+    $.fn.leftPadding = function () {
+        var $self = $(this);
+        return parseInt($self.css('paddingLeft'));
+    };
+    $.fn.rightPadding = function () {
+        var $self = $(this);
+        return parseInt($self.css('paddingRight'));
     };
     $.mlp = { x: 0, y: 0 }; // Mouse Last Position
     function documentHandler() {
