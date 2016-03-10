@@ -41,11 +41,13 @@ interface IProvider{
     getMetadata(): IMetadataItem[];
     getPagedIndices(index?: number): number[]; // todo: rename to something generic
     getRanges(): IRange[];
+    getCanvasMetadata(canvas: Manifesto.ICanvas): IMetadataItem[];
     getRangeByPath(path: string): Manifesto.IRange;
     getRangeCanvases(range: Manifesto.IRange): Manifesto.ICanvas[];
     getSeeAlso(): any;
     getSequenceIndexParam(): number;
     getStartCanvasIndex(): number;
+    getShareUrl(): string;
     getThumbs(width: number, height: number): Manifesto.IThumb[];
     getTitle(): string;
     getTotalCanvases(): number;

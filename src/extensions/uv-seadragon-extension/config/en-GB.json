@@ -54,7 +54,7 @@
       {
         "confinedImageSize": 1000,
         "maxImageWidth": 1000,
-        "selectionEnabled": true
+        "selectionEnabled": false
       }
     },
     "embedDialogue":
@@ -86,12 +86,16 @@
     {
       "options":
       {
+        "aggregateValues": "",
+        "canvasHeader": "About the image",
+        "canvasExclude": "",
         "displayOrder": "",
-        "exclude": "",
+        "manifestExclude": "",
         "panelAnimationDuration": 250,
         "panelCollapsedWidth": 30,
         "panelExpandedWidth": 255,
         "panelOpen": false,
+        "manifestHeader": "About the book",
         "textLimit": 4,
         "textLimitType": "lines"
       }

@@ -461,9 +461,6 @@ var Manifesto;
         ServiceProfile.prototype.autoComplete = function () {
             return new ServiceProfile(ServiceProfile.AUTOCOMPLETE.toString());
         };
-        ServiceProfile.prototype.clickThrough = function () {
-            return new ServiceProfile(ServiceProfile.CLICKTHROUGH.toString());
-        };
         ServiceProfile.prototype.iiif1ImageLevel1 = function () {
             return new ServiceProfile(ServiceProfile.IIIF1IMAGELEVEL1.toString());
         };
@@ -481,6 +478,12 @@ var Manifesto;
         };
         ServiceProfile.prototype.login = function () {
             return new ServiceProfile(ServiceProfile.LOGIN.toString());
+        };
+        ServiceProfile.prototype.clickThrough = function () {
+            return new ServiceProfile(ServiceProfile.CLICKTHROUGH.toString());
+        };
+        ServiceProfile.prototype.restricted = function () {
+            return new ServiceProfile(ServiceProfile.RESTRICTED.toString());
         };
         ServiceProfile.prototype.logout = function () {
             return new ServiceProfile(ServiceProfile.LOGOUT.toString());
@@ -522,7 +525,6 @@ var Manifesto;
             return new ServiceProfile(ServiceProfile.UIEXTENSIONS.toString());
         };
         ServiceProfile.AUTOCOMPLETE = new ServiceProfile("http://iiif.io/api/search/0/autocomplete");
-        ServiceProfile.CLICKTHROUGH = new ServiceProfile("http://wellcomelibrary.org/ld/iiif-ext/0/accept-terms-click-through");
         ServiceProfile.STANFORDIIIFIMAGECOMPLIANCE0 = new ServiceProfile("http://library.stanford.edu/iiif/image-api/compliance.html#level0");
         ServiceProfile.STANFORDIIIFIMAGECOMPLIANCE1 = new ServiceProfile("http://library.stanford.edu/iiif/image-api/compliance.html#level1");
         ServiceProfile.STANFORDIIIFIMAGECOMPLIANCE2 = new ServiceProfile("http://library.stanford.edu/iiif/image-api/compliance.html#level2");
@@ -536,13 +538,21 @@ var Manifesto;
         ServiceProfile.STANFORDIIIF1IMAGECONFORMANCE1 = new ServiceProfile("http://library.stanford.edu/iiif/image-api/1.1/conformance.html#level1");
         ServiceProfile.STANFORDIIIF1IMAGECONFORMANCE2 = new ServiceProfile("http://library.stanford.edu/iiif/image-api/1.1/conformance.html#level2");
         ServiceProfile.IIIF1IMAGELEVEL0 = new ServiceProfile("http://iiif.io/api/image/1/level0.json");
+        ServiceProfile.IIIF1IMAGELEVEL0PROFILE = new ServiceProfile("http://iiif.io/api/image/1/profiles/level0.json");
         ServiceProfile.IIIF1IMAGELEVEL1 = new ServiceProfile("http://iiif.io/api/image/1/level1.json");
+        ServiceProfile.IIIF1IMAGELEVEL1PROFILE = new ServiceProfile("http://iiif.io/api/image/1/profiles/level1.json");
         ServiceProfile.IIIF1IMAGELEVEL2 = new ServiceProfile("http://iiif.io/api/image/1/level2.json");
+        ServiceProfile.IIIF1IMAGELEVEL2PROFILE = new ServiceProfile("http://iiif.io/api/image/1/profiles/level2.json");
         ServiceProfile.IIIF2IMAGELEVEL0 = new ServiceProfile("http://iiif.io/api/image/2/level0.json");
+        ServiceProfile.IIIF2IMAGELEVEL0PROFILE = new ServiceProfile("http://iiif.io/api/image/2/profiles/level0.json");
         ServiceProfile.IIIF2IMAGELEVEL1 = new ServiceProfile("http://iiif.io/api/image/2/level1.json");
+        ServiceProfile.IIIF2IMAGELEVEL1PROFILE = new ServiceProfile("http://iiif.io/api/image/2/profiles/level1.json");
         ServiceProfile.IIIF2IMAGELEVEL2 = new ServiceProfile("http://iiif.io/api/image/2/level2.json");
+        ServiceProfile.IIIF2IMAGELEVEL2PROFILE = new ServiceProfile("http://iiif.io/api/image/2/profiles/level2.json");
         ServiceProfile.IXIF = new ServiceProfile("http://wellcomelibrary.org/ld/ixif/0/alpha.json");
         ServiceProfile.LOGIN = new ServiceProfile("http://iiif.io/api/auth/0/login");
+        ServiceProfile.CLICKTHROUGH = new ServiceProfile("http://iiif.io/api/auth/0/login/clickthrough");
+        ServiceProfile.RESTRICTED = new ServiceProfile("http://iiif.io/api/auth/0/login/restricted");
         ServiceProfile.LOGOUT = new ServiceProfile("http://iiif.io/api/auth/0/logout");
         ServiceProfile.OTHERMANIFESTATIONS = new ServiceProfile("http://iiif.io/api/otherManifestations.json");
         ServiceProfile.SEARCHWITHIN = new ServiceProfile("http://iiif.io/api/search/0/search");
@@ -746,11 +756,15 @@ var Manifesto;
                         profile === Manifesto.ServiceProfile.STANFORDIIIF1IMAGECONFORMANCE1.toString() ||
                         profile === Manifesto.ServiceProfile.STANFORDIIIF1IMAGECONFORMANCE2.toString() ||
                         profile === Manifesto.ServiceProfile.IIIF1IMAGELEVEL1.toString() ||
-                        profile === Manifesto.ServiceProfile.IIIF1IMAGELEVEL2.toString()) {
+                        profile === Manifesto.ServiceProfile.IIIF1IMAGELEVEL1PROFILE.toString() ||
+                        profile === Manifesto.ServiceProfile.IIIF1IMAGELEVEL2.toString() ||
+                        profile === Manifesto.ServiceProfile.IIIF1IMAGELEVEL2PROFILE.toString()) {
                         uri = id + 'full/' + width + ',' + height + '/0/native.jpg';
                     }
                     else if (profile === Manifesto.ServiceProfile.IIIF2IMAGELEVEL1.toString() ||
-                        profile === Manifesto.ServiceProfile.IIIF2IMAGELEVEL2.toString()) {
+                        profile === Manifesto.ServiceProfile.IIIF2IMAGELEVEL1PROFILE.toString() ||
+                        profile === Manifesto.ServiceProfile.IIIF2IMAGELEVEL2.toString() ||
+                        profile === Manifesto.ServiceProfile.IIIF2IMAGELEVEL2PROFILE.toString()) {
                         uri = id + 'full/' + width + ',' + height + '/0/default.jpg';
                     }
                 }
@@ -1605,7 +1619,7 @@ var Manifesto;
                 request.end();
             });
         };
-        Utils.loadExternalResource = function (resource, tokenStorageStrategy, clickThrough, login, getAccessToken, storeAccessToken, getStoredAccessToken, handleResourceResponse, options) {
+        Utils.loadExternalResource = function (resource, tokenStorageStrategy, clickThrough, restricted, login, getAccessToken, storeAccessToken, getStoredAccessToken, handleResourceResponse, options) {
             return new Promise(function (resolve, reject) {
                 if (options && options.pessimisticAccessControl) {
                     // pessimistic: access control cookies may have been deleted.
@@ -1617,19 +1631,22 @@ var Manifesto;
                             if (resource.clickThroughService) {
                                 resolve(clickThrough(resource));
                             }
+                            else if (resource.restrictedService) {
+                                resolve(restricted(resource));
+                            }
                             else {
                                 login(resource).then(function () {
-                                    getAccessToken(resource).then(function (token) {
+                                    getAccessToken(resource, true).then(function (token) {
                                         resource.getData(token).then(function () {
                                             resolve(handleResourceResponse(resource));
-                                        })["catch"](function (error) {
-                                            reject(error);
+                                        })["catch"](function (message) {
+                                            reject(Utils.createInternalServerError(message));
                                         });
-                                    })["catch"](function (error) {
-                                        reject(error);
+                                    })["catch"](function (message) {
+                                        reject(Utils.createInternalServerError(message));
                                     });
-                                })["catch"](function (error) {
-                                    reject(error);
+                                })["catch"](function (message) {
+                                    reject(Utils.createInternalServerError(message));
                                 });
                             }
                         }
@@ -1637,8 +1654,8 @@ var Manifesto;
                             // this info.json isn't access controlled, therefore no need to request an access token.
                             resolve(resource);
                         }
-                    })["catch"](function (error) {
-                        reject(error);
+                    })["catch"](function (message) {
+                        reject(Utils.createInternalServerError(message));
                     });
                 }
                 else {
@@ -1658,33 +1675,53 @@ var Manifesto;
                                 else {
                                     // otherwise, load the resource data to determine the correct access control services.
                                     // if access controlled, do login.
-                                    Utils.authorize(resource, tokenStorageStrategy, clickThrough, login, getAccessToken, storeAccessToken, getStoredAccessToken).then(function () {
+                                    Utils.authorize(resource, tokenStorageStrategy, clickThrough, restricted, login, getAccessToken, storeAccessToken, getStoredAccessToken).then(function () {
                                         resolve(handleResourceResponse(resource));
                                     })["catch"](function (error) {
-                                        reject(error);
+                                        if (resource.restrictedService) {
+                                            reject(Utils.createRestrictedError());
+                                        }
+                                        else {
+                                            reject(Utils.createAuthorizationFailedError());
+                                        }
                                     });
                                 }
                             })["catch"](function (error) {
-                                reject(error);
+                                reject(Utils.createAuthorizationFailedError());
                             });
                         }
                         else {
-                            Utils.authorize(resource, tokenStorageStrategy, clickThrough, login, getAccessToken, storeAccessToken, getStoredAccessToken).then(function () {
+                            Utils.authorize(resource, tokenStorageStrategy, clickThrough, restricted, login, getAccessToken, storeAccessToken, getStoredAccessToken).then(function () {
                                 resolve(handleResourceResponse(resource));
                             })["catch"](function (error) {
-                                reject(error);
+                                reject(Utils.createAuthorizationFailedError());
                             });
                         }
                     })["catch"](function (error) {
-                        reject(error);
+                        reject(Utils.createAuthorizationFailedError());
                     });
                 }
             });
         };
-        Utils.loadExternalResources = function (resources, tokenStorageStrategy, clickThrough, login, getAccessToken, storeAccessToken, getStoredAccessToken, handleResourceResponse, options) {
+        Utils.createError = function (name, message) {
+            var error = new Error();
+            error.message = message;
+            error.name = name;
+            return error;
+        };
+        Utils.createAuthorizationFailedError = function () {
+            return Utils.createError(manifesto.StatusCodes.AUTHORIZATION_FAILED.toString(), "Authorization failed");
+        };
+        Utils.createRestrictedError = function () {
+            return Utils.createError(manifesto.StatusCodes.RESTRICTED.toString(), "Restricted");
+        };
+        Utils.createInternalServerError = function (message) {
+            return Utils.createError(manifesto.StatusCodes.INTERNAL_SERVER_ERROR.toString(), message);
+        };
+        Utils.loadExternalResources = function (resources, tokenStorageStrategy, clickThrough, restricted, login, getAccessToken, storeAccessToken, getStoredAccessToken, handleResourceResponse, options) {
             return new Promise(function (resolve, reject) {
                 var promises = _map(resources, function (resource) {
-                    return Utils.loadExternalResource(resource, tokenStorageStrategy, clickThrough, login, getAccessToken, storeAccessToken, getStoredAccessToken, handleResourceResponse, options);
+                    return Utils.loadExternalResource(resource, tokenStorageStrategy, clickThrough, restricted, login, getAccessToken, storeAccessToken, getStoredAccessToken, handleResourceResponse, options);
                 });
                 Promise.all(promises)
                     .then(function () {
@@ -1694,7 +1731,7 @@ var Manifesto;
                 });
             });
         };
-        Utils.authorize = function (resource, tokenStorageStrategy, clickThrough, login, getAccessToken, storeAccessToken, getStoredAccessToken) {
+        Utils.authorize = function (resource, tokenStorageStrategy, clickThrough, restricted, login, getAccessToken, storeAccessToken, getStoredAccessToken) {
             return new Promise(function (resolve, reject) {
                 resource.getData().then(function () {
                     if (resource.isAccessControlled()) {
@@ -1702,58 +1739,47 @@ var Manifesto;
                             if (storedAccessToken) {
                                 // try using the stored access token
                                 resource.getData(storedAccessToken).then(function () {
-                                    resolve(resource);
-                                })["catch"](function (error) {
-                                    reject(error);
+                                    if (resource.status === HTTPStatusCode.OK) {
+                                        resolve(resource); // happy path ended
+                                    }
+                                    else {
+                                        // the stored token is no good for this resource
+                                        Utils.showAuthInteraction(resource, tokenStorageStrategy, clickThrough, restricted, login, getAccessToken, storeAccessToken, resolve, reject);
+                                    }
+                                })["catch"](function (message) {
+                                    reject(Utils.createInternalServerError(message));
                                 });
                             }
                             else {
-                                if (resource.status === HTTPStatusCode.MOVED_TEMPORARILY && !resource.isResponseHandled) {
-                                    // if the resource was redirected to a degraded version
-                                    // and the response hasn't been handled yet.
-                                    // if the client wishes to trigger a login, set resource.isResponseHandled to true
-                                    // and call loadExternalResources() again passing the resource.
-                                    resolve(resource);
-                                }
-                                else if (resource.clickThroughService && !resource.isResponseHandled) {
-                                    // if the resource has a click through service, use that.
-                                    clickThrough(resource).then(function () {
-                                        getAccessToken(resource).then(function (accessToken) {
-                                            storeAccessToken(resource, accessToken, tokenStorageStrategy).then(function () {
-                                                resource.getData(accessToken).then(function () {
+                                // There was no stored token, but the user might have a cookie that will grant a token
+                                getAccessToken(resource, false).then(function (accessToken) {
+                                    if (accessToken) {
+                                        storeAccessToken(resource, accessToken, tokenStorageStrategy).then(function () {
+                                            // try using the fresh access token
+                                            resource.getData(accessToken).then(function () {
+                                                if (resource.status === HTTPStatusCode.OK) {
                                                     resolve(resource);
-                                                })["catch"](function (error) {
-                                                    reject(error);
-                                                });
-                                            })["catch"](function (error) {
-                                                reject(error);
+                                                }
+                                                else {
+                                                    // User has a token, but it's not good enough
+                                                    Utils.showAuthInteraction(resource, tokenStorageStrategy, clickThrough, restricted, login, getAccessToken, storeAccessToken, resolve, reject);
+                                                }
+                                            })["catch"](function (message) {
+                                                reject(Utils.createInternalServerError(message));
                                             });
-                                        })["catch"](function (error) {
-                                            reject(error);
+                                        })["catch"](function (message) {
+                                            // not able to store access token
+                                            reject(Utils.createInternalServerError(message));
                                         });
-                                    });
-                                }
-                                else {
-                                    // get an access token
-                                    login(resource).then(function () {
-                                        getAccessToken(resource).then(function (accessToken) {
-                                            storeAccessToken(resource, accessToken, tokenStorageStrategy).then(function () {
-                                                resource.getData(accessToken).then(function () {
-                                                    resolve(resource);
-                                                })["catch"](function (error) {
-                                                    reject(error);
-                                                });
-                                            })["catch"](function (error) {
-                                                reject(error);
-                                            });
-                                        })["catch"](function (error) {
-                                            reject(error);
-                                        });
-                                    });
-                                }
+                                    }
+                                    else {
+                                        // The user did not have a cookie that granted a token
+                                        Utils.showAuthInteraction(resource, tokenStorageStrategy, clickThrough, restricted, login, getAccessToken, storeAccessToken, resolve, reject);
+                                    }
+                                });
                             }
-                        })["catch"](function (error) {
-                            reject(error);
+                        })["catch"](function (message) {
+                            reject(Utils.createInternalServerError(message));
                         });
                     }
                     else {
@@ -1763,6 +1789,55 @@ var Manifesto;
                 });
             });
         };
+        Utils.showAuthInteraction = function (resource, tokenStorageStrategy, clickThrough, restricted, login, getAccessToken, storeAccessToken, resolve, reject) {
+            if (resource.status === HTTPStatusCode.MOVED_TEMPORARILY && !resource.isResponseHandled) {
+                // if the resource was redirected to a degraded version
+                // and the response hasn't been handled yet.
+                // if the client wishes to trigger a login, set resource.isResponseHandled to true
+                // and call loadExternalResources() again passing the resource.
+                resolve(resource);
+            }
+            else if (resource.restrictedService) {
+                resolve(restricted(resource));
+            }
+            else if (resource.clickThroughService && !resource.isResponseHandled) {
+                // if the resource has a click through service, use that.
+                clickThrough(resource).then(function () {
+                    getAccessToken(resource, true).then(function (accessToken) {
+                        storeAccessToken(resource, accessToken, tokenStorageStrategy).then(function () {
+                            resource.getData(accessToken).then(function () {
+                                resolve(resource);
+                            })["catch"](function (message) {
+                                reject(Utils.createInternalServerError(message));
+                            });
+                        })["catch"](function (message) {
+                            reject(Utils.createInternalServerError(message));
+                        });
+                    })["catch"](function (message) {
+                        reject(Utils.createInternalServerError(message));
+                    });
+                });
+            }
+            else {
+                // get an access token
+                login(resource).then(function () {
+                    getAccessToken(resource, true).then(function (accessToken) {
+                        storeAccessToken(resource, accessToken, tokenStorageStrategy).then(function () {
+                            resource.getData(accessToken).then(function () {
+                                resolve(resource);
+                            })["catch"](function (message) {
+                                reject(Utils.createInternalServerError(message));
+                            });
+                        })["catch"](function (message) {
+                            reject(Utils.createInternalServerError(message));
+                        });
+                    })["catch"](function (message) {
+                        reject(Utils.createInternalServerError(message));
+                    });
+                });
+            }
+        };
+        ;
         Utils.getService = function (resource, profile) {
             var services = this.getServices(resource);
             // coerce profile to string
@@ -1834,6 +1909,12 @@ global.manifesto = module.exports = {
     TreeNodeType: new Manifesto.TreeNodeType(),
     ViewingDirection: new Manifesto.ViewingDirection(),
     ViewingHint: new Manifesto.ViewingHint(),
+    StatusCodes: {
+        AUTHORIZATION_FAILED: 1,
+        FORBIDDEN: 2,
+        INTERNAL_SERVER_ERROR: 3,
+        RESTRICTED: 4
+    },
     create: function (manifest, options) {
         return Manifesto.Deserialiser.parse(manifest, options);
     },
@@ -1858,11 +1939,17 @@ global.manifesto = module.exports = {
             profile.toString() === Manifesto.ServiceProfile.STANFORDIIIF1IMAGECONFORMANCE1.toString() ||
             profile.toString() === Manifesto.ServiceProfile.STANFORDIIIF1IMAGECONFORMANCE2.toString() ||
             profile.toString() === Manifesto.ServiceProfile.IIIF1IMAGELEVEL0.toString() ||
+            profile.toString() === Manifesto.ServiceProfile.IIIF1IMAGELEVEL0PROFILE.toString() ||
             profile.toString() === Manifesto.ServiceProfile.IIIF1IMAGELEVEL1.toString() ||
+            profile.toString() === Manifesto.ServiceProfile.IIIF1IMAGELEVEL1PROFILE.toString() ||
             profile.toString() === Manifesto.ServiceProfile.IIIF1IMAGELEVEL2.toString() ||
+            profile.toString() === Manifesto.ServiceProfile.IIIF1IMAGELEVEL2PROFILE.toString() ||
             profile.toString() === Manifesto.ServiceProfile.IIIF2IMAGELEVEL0.toString() ||
+            profile.toString() === Manifesto.ServiceProfile.IIIF2IMAGELEVEL0PROFILE.toString() ||
             profile.toString() === Manifesto.ServiceProfile.IIIF2IMAGELEVEL1.toString() ||
-            profile.toString() === Manifesto.ServiceProfile.IIIF2IMAGELEVEL2.toString()) {
+            profile.toString() === Manifesto.ServiceProfile.IIIF2IMAGELEVEL1PROFILE.toString() ||
+            profile.toString() === Manifesto.ServiceProfile.IIIF2IMAGELEVEL2.toString() ||
+            profile.toString() === Manifesto.ServiceProfile.IIIF2IMAGELEVEL2PROFILE.toString()) {
             return true;
         }
         return false;
@@ -1873,7 +1960,9 @@ global.manifesto = module.exports = {
             profile.toString() === Manifesto.ServiceProfile.STANFORDIIIFIMAGECONFORMANCE0.toString() ||
             profile.toString() === Manifesto.ServiceProfile.STANFORDIIIF1IMAGECONFORMANCE0.toString() ||
             profile.toString() === Manifesto.ServiceProfile.IIIF1IMAGELEVEL0.toString() ||
-            profile.toString() === Manifesto.ServiceProfile.IIIF2IMAGELEVEL0.toString()) {
+            profile.toString() === Manifesto.ServiceProfile.IIIF1IMAGELEVEL0PROFILE.toString() ||
+            profile.toString() === Manifesto.ServiceProfile.IIIF2IMAGELEVEL0.toString() ||
+            profile.toString() === Manifesto.ServiceProfile.IIIF2IMAGELEVEL0PROFILE.toString()) {
             return true;
         }
         return false;
@@ -1884,7 +1973,9 @@ global.manifesto = module.exports = {
             profile.toString() === Manifesto.ServiceProfile.STANFORDIIIFIMAGECONFORMANCE1.toString() ||
             profile.toString() === Manifesto.ServiceProfile.STANFORDIIIF1IMAGECONFORMANCE1.toString() ||
             profile.toString() === Manifesto.ServiceProfile.IIIF1IMAGELEVEL1.toString() ||
-            profile.toString() === Manifesto.ServiceProfile.IIIF2IMAGELEVEL1.toString()) {
+            profile.toString() === Manifesto.ServiceProfile.IIIF1IMAGELEVEL1PROFILE.toString() ||
+            profile.toString() === Manifesto.ServiceProfile.IIIF2IMAGELEVEL1.toString() ||
+            profile.toString() === Manifesto.ServiceProfile.IIIF2IMAGELEVEL1PROFILE.toString()) {
             return true;
         }
         return false;
@@ -1895,15 +1986,17 @@ global.manifesto = module.exports = {
             profile.toString() === Manifesto.ServiceProfile.STANFORDIIIFIMAGECONFORMANCE2.toString() ||
             profile.toString() === Manifesto.ServiceProfile.STANFORDIIIF1IMAGECONFORMANCE2.toString() ||
             profile.toString() === Manifesto.ServiceProfile.IIIF1IMAGELEVEL2.toString() ||
-            profile.toString() === Manifesto.ServiceProfile.IIIF2IMAGELEVEL2.toString()) {
+            profile.toString() === Manifesto.ServiceProfile.IIIF1IMAGELEVEL2PROFILE.toString() ||
+            profile.toString() === Manifesto.ServiceProfile.IIIF2IMAGELEVEL2.toString() ||
+            profile.toString() === Manifesto.ServiceProfile.IIIF2IMAGELEVEL2PROFILE.toString()) {
             return true;
         }
         return false;
     },
     // todo: create hasServiceDescriptor
     // based on @profile and @type (or lack of) can the resource describe associated services?
-    loadExternalResources: function (resources, tokenStorageStrategy, clickThrough, login, getAccessToken, storeAccessToken, getStoredAccessToken, handleResourceResponse, options) {
-        return Manifesto.Utils.loadExternalResources(resources, tokenStorageStrategy, clickThrough, login, getAccessToken, storeAccessToken, getStoredAccessToken, handleResourceResponse, options);
+    loadExternalResources: function (resources, tokenStorageStrategy, clickThrough, restricted, login, getAccessToken, storeAccessToken, getStoredAccessToken, handleResourceResponse, options) {
+        return Manifesto.Utils.loadExternalResources(resources, tokenStorageStrategy, clickThrough, restricted, login, getAccessToken, storeAccessToken, getStoredAccessToken, handleResourceResponse, options);
     },
     loadManifest: function (uri) {
         return Manifesto.Utils.loadResource(uri);

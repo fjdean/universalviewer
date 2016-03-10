@@ -282,6 +282,14 @@ class BaseProvider implements IProvider{
         return this.getCurrentSequence().getStartCanvasIndex();
     }
 
+    getShareUrl(): string {
+        if (Utils.Documents.IsInIFrame()){
+            return parent.document.location.href;
+        }
+
+        return document.location.href;
+    }
+
     addTimestamp(uri: string): string{
         return uri + "?t=" + Utils.Dates.GetTimeStamp();
     }
@@ -365,6 +373,22 @@ class BaseProvider implements IProvider{
             result.push(<IMetadataItem>{
                 label: "logo",
                 value: '<img src="' + this.manifest.getLogo() + '"/>',
+                isRootLevel: true
+            });
+        }
+
+        return result;
+    }
+    
+    getCanvasMetadata(canvas: Manifesto.ICanvas): IMetadataItem[] {
+        var result: IMetadataItem[] = [];
+
+        var metadata = canvas.getMetadata();
+
+        if (metadata){
+            result.push(<IMetadataItem>{
+                label: "metadata",
+                value: metadata,
                 isRootLevel: true
             });
         }

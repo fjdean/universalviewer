@@ -1,5 +1,6 @@
 class ExternalResource implements Manifesto.IExternalResource {
     public clickThroughService: Manifesto.IService;
+    public restrictedService: Manifesto.IService;
     public data: any;
     public dataUri: string;
     public error: any;
@@ -19,14 +20,23 @@ class ExternalResource implements Manifesto.IExternalResource {
     private _parseAuthServices(resource: any): void {
         this.clickThroughService = manifesto.getService(resource, manifesto.ServiceProfile.clickThrough().toString());
         this.loginService = manifesto.getService(resource, manifesto.ServiceProfile.login().toString());
-        if (this.loginService){
+        this.restrictedService = manifesto.getService(resource, manifesto.ServiceProfile.restricted().toString());
+
+        // todo: create this.preferredService?
+        if (this.clickThroughService){
+            this.logoutService = this.clickThroughService.getService(manifesto.ServiceProfile.logout().toString());
+            this.tokenService = this.clickThroughService.getService(manifesto.ServiceProfile.token().toString());
+        } else if (this.loginService){
             this.logoutService = this.loginService.getService(manifesto.ServiceProfile.logout().toString());
             this.tokenService = this.loginService.getService(manifesto.ServiceProfile.token().toString());
+        } else if (this.restrictedService) {
+            this.logoutService = this.restrictedService.getService(manifesto.ServiceProfile.logout().toString());
+            this.tokenService = this.restrictedService.getService(manifesto.ServiceProfile.token().toString());
         }
     }
 
     public isAccessControlled(): boolean {
-        if(this.clickThroughService || this.loginService){
+        if(this.clickThroughService || this.loginService || this.restrictedService){
             return true;
         }
         return false;
