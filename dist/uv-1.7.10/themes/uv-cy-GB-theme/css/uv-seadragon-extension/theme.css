@@ -451,7 +451,7 @@
   height: 25px;
 }
 #app .headerPanel .centerOptions .autocomplete .result.selected {
-  background: #efefef;
+  background: #ffffff;
 }
 #app .headerPanel .rightOptions .pagingToggle {
   margin: -1px 4px 0 0;
