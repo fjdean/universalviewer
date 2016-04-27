@@ -25,9 +25,14 @@
     {
       "options":
       {
+        "defaultToTreeEnabled": false,
+        "defaultToTreeIfGreaterThan": 0,
         "elideCount": 40,
         "expandFullEnabled": true,
+        "galleryThumbChunkedResizingEnabled": true,
+        "galleryThumbChunkedResizingThreshold": 400,
         "galleryThumbHeight": 320,
+        "galleryThumbLoadPadding": 3,
         "galleryThumbWidth": 200,
         "oneColThumbHeight": 320,
         "oneColThumbWidth": 200,
@@ -87,15 +92,14 @@
       "options":
       {
         "aggregateValues": "",
-        "canvasHeader": "About the image",
         "canvasExclude": "",
+        "copyToClipboardEnabled": false,
         "displayOrder": "",
         "manifestExclude": "",
         "panelAnimationDuration": 250,
         "panelCollapsedWidth": 30,
         "panelExpandedWidth": 255,
         "panelOpen": false,
-        "manifestHeader": "About the book",
         "textLimit": 4,
         "textLimitType": "lines"
       }

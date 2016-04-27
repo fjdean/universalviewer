@@ -74,6 +74,7 @@ class BaseExtension implements IExtension {
                 config: this.provider.bootstrapper.config,
                 params: this.provider.bootstrapper.params
             },
+            settings: this.provider.getSettings(),
             preview: this.getSharePreview()
         });
 
@@ -85,6 +86,11 @@ class BaseExtension implements IExtension {
         if (!this.provider.isHomeDomain) this.$element.addClass('embedded');
         if (this.provider.isLightbox) this.$element.addClass('lightbox');
 
+        $(document).on('mousemove', (e) => {
+            this.mouseX = e.pageX;
+            this.mouseY = e.pageY;
+        });
+
         // events.
         if (!this.provider.isReload){
             window.onresize = () => {
@@ -94,11 +100,6 @@ class BaseExtension implements IExtension {
 
                 this.resize();
             };
-
-            $(document).on('mousemove', (e) => {
-                this.mouseX = e.pageX;
-                this.mouseY = e.pageY;
-            });
 
             this.$element.on('drop', (e => {
                 e.preventDefault();
@@ -175,17 +176,18 @@ class BaseExtension implements IExtension {
             this.triggerSocket(BaseCommands.ACCEPT_TERMS);
         });
 
-        $.subscribe(BaseCommands.AUTHORIZATION_FAILED, () => {
-            this.triggerSocket(BaseCommands.AUTHORIZATION_FAILED);
+        $.subscribe(BaseCommands.LOGIN_FAILED, () => {
+            this.triggerSocket(BaseCommands.LOGIN_FAILED);
             this.showMessage(this.provider.config.content.authorisationFailedMessage);
         });
 
-        $.subscribe(BaseCommands.AUTHORIZATION_OCCURRED, () => {
-            this.triggerSocket(BaseCommands.AUTHORIZATION_OCCURRED);
+        $.subscribe(BaseCommands.LOGIN, () => {
+            this.triggerSocket(BaseCommands.LOGIN);
         });
 
         $.subscribe(BaseCommands.BOOKMARK, () => {
             this.bookmark();
+            this.triggerSocket(BaseCommands.BOOKMARK);
         });
 
         $.subscribe(BaseCommands.CANVAS_INDEX_CHANGE_FAILED, () => {
@@ -196,8 +198,8 @@ class BaseExtension implements IExtension {
             this.triggerSocket(BaseCommands.CANVAS_INDEX_CHANGED, canvasIndex);
         });
 
-        $.subscribe(BaseCommands.CLICKTHROUGH_OCCURRED, () => {
-            this.triggerSocket(BaseCommands.CLICKTHROUGH_OCCURRED);
+        $.subscribe(BaseCommands.CLICKTHROUGH, () => {
+            this.triggerSocket(BaseCommands.CLICKTHROUGH);
         });
 
         $.subscribe(BaseCommands.CLOSE_ACTIVE_DIALOGUE, () => {
@@ -222,8 +224,8 @@ class BaseExtension implements IExtension {
             this.triggerSocket(BaseCommands.DOWN_ARROW);
         });
 
-        $.subscribe(BaseCommands.DOWNLOAD, (e, id) => {
-            this.triggerSocket(BaseCommands.DOWNLOAD, id);
+        $.subscribe(BaseCommands.DOWNLOAD, (e, obj) => {
+            this.triggerSocket(BaseCommands.DOWNLOAD, obj);
         });
 
         $.subscribe(BaseCommands.END, () => {
@@ -279,6 +281,10 @@ class BaseExtension implements IExtension {
             this.triggerSocket(BaseCommands.HIDE_OVERLAY);
         });
 
+        $.subscribe(BaseCommands.HIDE_RESTRICTED_DIALOGUE, () => {
+            this.triggerSocket(BaseCommands.HIDE_RESTRICTED_DIALOGUE);
+        });
+
         $.subscribe(BaseCommands.HIDE_SETTINGS_DIALOGUE, () => {
             this.triggerSocket(BaseCommands.HIDE_SETTINGS_DIALOGUE);
         });
@@ -305,6 +311,14 @@ class BaseExtension implements IExtension {
 
         $.subscribe(BaseCommands.LEFTPANEL_EXPAND_FULL_START, () => {
             this.triggerSocket(BaseCommands.LEFTPANEL_EXPAND_FULL_START);
+        });
+
+        $.subscribe(BaseCommands.LOAD_FAILED, () => {
+            this.triggerSocket(BaseCommands.LOAD_FAILED);
+
+            if (!_.isNull(that.provider.lastCanvasIndex) && that.provider.lastCanvasIndex !== that.provider.canvasIndex){
+                this.viewCanvas(that.provider.lastCanvasIndex);
+            }
         });
 
         $.subscribe(BaseCommands.EXTERNAL_LINK_CLICKED, (e, url) => {
@@ -571,6 +585,7 @@ class BaseExtension implements IExtension {
     }
 
     triggerSocket(eventName: string, eventObject?: any): void {
+        jQuery(document).trigger(eventName, [eventObject]);
         if (this.bootstrapper.socket) {
             this.bootstrapper.socket.postMessage(JSON.stringify({ eventName: eventName, eventObject: eventObject }));
         }
@@ -605,7 +620,7 @@ class BaseExtension implements IExtension {
     getSharePreview(): any {
         var preview: any = {};
 
-        preview.title = this.provider.getTitle();
+        preview.title = this.provider.getLabel();
 
         // todo: use getThumb (when implemented)
 
@@ -614,7 +629,7 @@ class BaseExtension implements IExtension {
         var thumbnail = canvas.getProperty('thumbnail');
 
         if (!thumbnail || !_.isString(thumbnail)){
-            thumbnail = canvas.getThumbUri(this.provider.config.options.bookmarkThumbWidth, this.provider.config.options.bookmarkThumbHeight);
+            thumbnail = canvas.getCanonicalImageUri(this.provider.config.options.bookmarkThumbWidth);
         }
 
         preview.image = thumbnail;
@@ -667,7 +682,7 @@ class BaseExtension implements IExtension {
                 })['catch']((error: any) => {
                     switch(error.name){
                         case manifesto.StatusCodes.AUTHORIZATION_FAILED.toString():
-                            $.publish(BaseCommands.AUTHORIZATION_FAILED);
+                            $.publish(BaseCommands.LOGIN_FAILED);
                             break;
                         case manifesto.StatusCodes.FORBIDDEN.toString():
                             $.publish(BaseCommands.FORBIDDEN);
@@ -716,6 +731,7 @@ class BaseExtension implements IExtension {
             canvasIndex = 0;
         }
 
+        this.provider.lastCanvasIndex = this.provider.canvasIndex;
         this.provider.canvasIndex = canvasIndex;
 
         $.publish(BaseCommands.CANVAS_INDEX_CHANGED, [canvasIndex]);
@@ -774,7 +790,9 @@ class BaseExtension implements IExtension {
 
     isLeftPanelEnabled(): boolean {
         if (Utils.Bools.GetBool(this.provider.config.options.leftPanelEnabled, true)){
-            if (this.provider.isMultiCanvas()){
+            if (this.provider.hasParentCollection()){
+                return true;
+            } else if (this.provider.isMultiCanvas()){
                 if (this.provider.getViewingHint().toString() !== manifesto.ViewingHint.continuous().toString()){
                     return true;
                 }
@@ -825,7 +843,7 @@ class BaseExtension implements IExtension {
                     var pollTimer = window.setInterval(() => {
                         if (win.closed) {
                             window.clearInterval(pollTimer);
-                            $.publish(BaseCommands.CLICKTHROUGH_OCCURRED);
+                            $.publish(BaseCommands.CLICKTHROUGH);
                             resolve();
                         }
                     }, 500);
@@ -859,12 +877,22 @@ class BaseExtension implements IExtension {
 
             $.publish(BaseCommands.SHOW_LOGIN_DIALOGUE, [{
                 resource: resource,
-                acceptCallback: () => {
+                loginCallback: () => {
                     var win = window.open(resource.loginService.id + "?t=" + new Date().getTime());
                     var pollTimer = window.setInterval(function () {
                         if (win.closed) {
                             window.clearInterval(pollTimer);
-                            $.publish(BaseCommands.AUTHORIZATION_OCCURRED);
+                            $.publish(BaseCommands.LOGIN);
+                            resolve();
+                        }
+                    }, 500);
+                },
+                logoutCallback: () => {
+                    var win = window.open(resource.logoutService.id + "?t=" + new Date().getTime());
+                    var pollTimer = window.setInterval(function () {
+                        if (win.closed) {
+                            window.clearInterval(pollTimer);
+                            $.publish(BaseCommands.LOGOUT);
                             resolve();
                         }
                     }, 500);
