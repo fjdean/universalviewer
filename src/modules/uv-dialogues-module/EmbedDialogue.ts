@@ -131,7 +131,7 @@ class EmbedDialogue extends Dialogue {
             $(this).select();
         });
 
-        if (!this.provider.isDeepLinkingEnabled()){
+        if (!this.extension.isDeepLinkingEnabled()){
             this.$url.hide();
         }
 
@@ -168,7 +168,7 @@ class EmbedDialogue extends Dialogue {
         });
 
         this.$customWidth.keydown((event) => {
-            Utils.Numbers.NumericalInput(event);
+            Utils.Numbers.numericalInput(event);
         });
 
         this.$customWidth.keyup((event) => {
@@ -176,7 +176,7 @@ class EmbedDialogue extends Dialogue {
         });
 
         this.$customHeight.keydown((event) => {
-            Utils.Numbers.NumericalInput(event);
+            Utils.Numbers.numericalInput(event);
         });
 
         this.$customHeight.keyup((event) => {
@@ -246,18 +246,20 @@ class EmbedDialogue extends Dialogue {
     }
 
     update(): void {
-        var canvas: Manifesto.ICanvas = this.provider.getCurrentCanvas();
+        var canvas: Manifesto.ICanvas = this.extension.helper.getCurrentCanvas();
+
+        if (!canvas) return;
 
         var thumbnail = canvas.getProperty('thumbnail');
 
         if (!thumbnail || !_.isString(thumbnail)){
-            thumbnail = canvas.getCanonicalImageUri(this.provider.config.options.bookmarkThumbWidth);
+            thumbnail = canvas.getCanonicalImageUri(this.extension.config.options.bookmarkThumbWidth);
         }
 
         this.$link.attr('href', thumbnail);
         this.$image.attr('src', thumbnail);
 
-        this.$url.val(this.provider.getShareUrl());
+        this.$url.val(this.extension.getShareUrl());
     }
 
     close(): void {

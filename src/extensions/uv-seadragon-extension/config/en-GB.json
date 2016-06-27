@@ -10,8 +10,10 @@
     "openTemplate": "http://universalviewer.io?manifest={0}",
     "overrideFullScreen": false,
     "pagingEnabled": true,
+    "pagingOptionEnabled": true,
     "pessimisticAccessControl": false,
     "preserveViewport": false,
+    "printMimeType": "application/pdf",
     "rightPanelEnabled": true,
     "saveUserSettings": false,
     "searchWithinEnabled": true,
@@ -78,7 +80,8 @@
         "feedbackEnabled": false,
         "fullscreenEnabled": true,
         "minimiseButtons": true,
-        "openEnabled": false
+        "openEnabled": false,
+        "printEnabled": false
       }
     },
     "genericDialogue":

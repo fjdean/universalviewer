@@ -5,7 +5,6 @@ import CroppedImageDimensions = require("./CroppedImageDimensions");
 import DownloadOption = require("../../modules/uv-shared-module/DownloadOption");
 import DownloadType = require("./DownloadType");
 import ISeadragonExtension = require("./ISeadragonExtension");
-import ISeadragonProvider = require("./ISeadragonProvider");
 import Size = Utils.Measurements.Size;
 
 class DownloadDialogue extends BaseDownloadDialogue {
@@ -91,7 +90,7 @@ class DownloadDialogue extends BaseDownloadDialogue {
             var label: string = $selectedOption.attr('title');
             var mime: any = $selectedOption.data('mime');
             var type: string = DownloadType.UNKNOWN;
-            var canvas: Manifesto.ICanvas = this.provider.getCurrentCanvas();
+            var canvas: Manifesto.ICanvas = this.extension.helper.getCurrentCanvas();
 
             if (this.renderingUrls[id]) {
                 if (mime){
@@ -106,7 +105,7 @@ class DownloadDialogue extends BaseDownloadDialogue {
                 switch (id){
                     case DownloadOption.currentViewAsJpg.toString():
                         var viewer = (<ISeadragonExtension>that.extension).getViewer();
-                        window.open((<ISeadragonProvider>that.provider).getCroppedImageUri(canvas, viewer));
+                        window.open((<ISeadragonExtension>that.extension).getCroppedImageUri(canvas, viewer));
                         type = DownloadType.CURRENTVIEW;
                         break;
                     case DownloadOption.selection.toString():
@@ -117,7 +116,7 @@ class DownloadDialogue extends BaseDownloadDialogue {
                         type = DownloadType.WHOLEIMAGEHIGHRES;
                         break;
                     case DownloadOption.wholeImageLowResAsJpg.toString():
-                        window.open((<ISeadragonProvider>that.provider).getConfinedImageUri(canvas, that.options.confinedImageSize));
+                        window.open((<ISeadragonExtension>that.extension).getConfinedImageUri(canvas, that.options.confinedImageSize));
                         type = DownloadType.WHOLEIMAGELOWRES;
                         break;
                 }
@@ -140,14 +139,14 @@ class DownloadDialogue extends BaseDownloadDialogue {
     open() {
         super.open();
 
-        var canvas: Manifesto.ICanvas = this.provider.getCurrentCanvas();
+        var canvas: Manifesto.ICanvas = this.extension.helper.getCurrentCanvas();
 
         if (this.isDownloadOptionAvailable(DownloadOption.currentViewAsJpg)) {
             var $input: JQuery = this.$currentViewAsJpgButton.find('input');
             var $label: JQuery = this.$currentViewAsJpgButton.find('label');
             var label: string = this.content.currentViewAsJpg;
             var viewer = (<ISeadragonExtension>this.extension).getViewer();
-            var dimensions: CroppedImageDimensions = (<ISeadragonProvider>this.provider).getCroppedImageDimensions(canvas, viewer);
+            var dimensions: CroppedImageDimensions = (<ISeadragonExtension>this.extension).getCroppedImageDimensions(canvas, viewer);
 
             if (dimensions){
                 label = String.format(label, dimensions.size.width, dimensions.size.height);
@@ -165,11 +164,23 @@ class DownloadDialogue extends BaseDownloadDialogue {
             var $input: JQuery = this.$wholeImageHighResButton.find('input');
             var $label: JQuery = this.$wholeImageHighResButton.find('label');
             var mime = this.getMimeTypeForCurrentCanvas();
-            var size: Size = this.getDimensionsForCurrentCanvas();
-            var label = String.format(this.content.wholeImageHighRes, size.width, size.height, Utils.Files.SimplifyMimeType(mime));
-            $label.text(label);
-            $input.prop('title', label);
-            this.$wholeImageHighResButton.show();
+
+            if (mime){
+                mime = Utils.Files.simplifyMimeType(mime);
+            } else {
+                mime = '?';
+            }
+
+            var size: Size = this.getComputedDimensionsForCurrentCanvas();
+
+            if (!size){
+                this.$wholeImageHighResButton.hide();
+            } else {
+                var label: string = String.format(this.content.wholeImageHighRes, size.width, size.height, mime);
+                $label.text(label);
+                $input.prop('title', label);
+                this.$wholeImageHighResButton.show();
+            }
         } else {
             this.$wholeImageHighResButton.hide();
         }
@@ -177,7 +188,7 @@ class DownloadDialogue extends BaseDownloadDialogue {
         if (this.isDownloadOptionAvailable(DownloadOption.wholeImageLowResAsJpg)) {
             var $input: JQuery = this.$wholeImageLowResAsJpgButton.find('input');
             var $label: JQuery = this.$wholeImageLowResAsJpgButton.find('label');
-            var size: Size = (<ISeadragonProvider>this.provider).getConfinedImageDimensions(canvas, this.options.confinedImageSize);
+            var size: Size = (<ISeadragonExtension>this.extension).getConfinedImageDimensions(canvas, this.options.confinedImageSize);
             var label = String.format(this.content.wholeImageLowResAsJpg, size.width, size.height);
             $label.text(label);
             $input.prop('title', label);
@@ -210,21 +221,13 @@ class DownloadDialogue extends BaseDownloadDialogue {
         }
 
         if (this.isDownloadOptionAvailable(DownloadOption.dynamicSequenceRenderings)) {
-            this.addDownloadOptionsForRenderings(this.provider.getCurrentSequence(), this.content.entireDocument, DownloadOption.dynamicSequenceRenderings);
-        }
-
-        if (!this.$downloadOptions.find('li.option:visible').length){
-            this.$noneAvailable.show();
-            this.$downloadButton.hide();
-        } else {
-            // select first option.
-            this.$downloadOptions.find('li.option input:visible:first').prop("checked", true);
-            this.$noneAvailable.hide();
-            this.$downloadButton.show();
+            this.addDownloadOptionsForRenderings(this.extension.helper.getCurrentSequence(), this.content.entireDocument, DownloadOption.dynamicSequenceRenderings);
         }
 
         // hide empty groups
-        this.$downloadOptions.find('li.group').each((index, group) => {
+        var $groups: JQuery = this.$downloadOptions.find('li.group');
+
+        $groups.each((index, group) => {
             var $group: JQuery = $(group);
 
             $group.show();
@@ -235,10 +238,22 @@ class DownloadDialogue extends BaseDownloadDialogue {
             }
         });
 
-        if ((<ISeadragonProvider>this.provider).isPagingSettingEnabled()) {
+        this.$downloadOptions.find('li.group:visible').last().addClass('lastVisible');
+
+        if ((<ISeadragonExtension>this.extension).isPagingSettingEnabled()) {
             this.$pagingNote.show();
         } else {
             this.$pagingNote.hide();
+        }
+
+        if (!this.$downloadOptions.find('li.option:visible').length){
+            this.$noneAvailable.show();
+            this.$downloadButton.hide();
+        } else {
+            // select first option.
+            this.$downloadOptions.find('li.option input:visible:first').prop("checked", true);
+            this.$noneAvailable.hide();
+            this.$downloadButton.show();
         }
 
         this.resize();
@@ -263,7 +278,7 @@ class DownloadDialogue extends BaseDownloadDialogue {
                 } else {
                     label = defaultLabel;
                 }
-                var mime: string = Utils.Files.SimplifyMimeType(rendering.getFormat().toString());
+                var mime: string = Utils.Files.simplifyMimeType(rendering.getFormat().toString());
                 label = String.format(label, mime);
                 this.renderingUrls[currentId] = rendering.id;
                 var $button = $('<li class="option dynamic"><input id="' + currentId + '" data-mime="' + mime + '" title="' + label + '" type="radio" name="downloadOptions" /><label for="' + currentId + '">' + label + '</label></li>');
@@ -288,7 +303,7 @@ class DownloadDialogue extends BaseDownloadDialogue {
     }
 
     getCurrentCanvasImageResource() {
-        var images = this.provider.getCurrentCanvas().getImages();
+        var images = this.extension.helper.getCurrentCanvas().getImages();
         if (images[0]) {
             return images[0].getResource();
         }
@@ -296,48 +311,62 @@ class DownloadDialogue extends BaseDownloadDialogue {
     }
 
     getHighResImageUriForCurrentCanvas(): string {
-        var canvas: Manifesto.ICanvas = this.provider.getCurrentCanvas();
-
-        return canvas.getCanonicalImageUri();
+        var canvas: Manifesto.ICanvas = this.extension.helper.getCurrentCanvas();
+        var size: Size = this.getComputedDimensionsForCurrentCanvas();
+        if (size){
+            var width: number = size.width;
+            return canvas.getCanonicalImageUri(width);
+        }
+        return '';
     }
 
     getMimeTypeForCurrentCanvas() {
         var resource = this.getCurrentCanvasImageResource();
-        return resource ? resource.getFormat().toString() : null;
+        var format: Manifesto.ResourceFormat = resource.getFormat();
+
+        if (format){
+            return format.toString();
+        }
+
+        return null;
     }
 
     getDimensionsForCurrentCanvas(): Size {
-        var currentCanvas: Manifesto.ICanvas = this.provider.getCurrentCanvas();
+        var currentCanvas: Manifesto.ICanvas = this.extension.helper.getCurrentCanvas();
+        return new Size(currentCanvas.externalResource.data.width, currentCanvas.externalResource.data.height);
+    }
 
-        var size = new Size(0, 0);
+    getMaxDimensionsForCurrentCanvas(): Size {
+        var currentCanvas: Manifesto.ICanvas = this.extension.helper.getCurrentCanvas();
+        if (currentCanvas.externalResource.data.profile[1]){
+            return new Size(currentCanvas.externalResource.data.profile[1].maxWidth, currentCanvas.externalResource.data.profile[1].maxHeight);
+        }
+        return null;
+    }
 
-        size.width = currentCanvas.externalResource.data.width;
-        size.height = currentCanvas.externalResource.data.height;
+    getComputedDimensionsForCurrentCanvas(): Size {
+        var size: Size = this.getDimensionsForCurrentCanvas();
+        var maxSize: Size =  this.getMaxDimensionsForCurrentCanvas();
 
-        //var image = this.getCurrentCanvasImageResource();
-        //var size = new Size(0, 0);
-        //
-        //if (!image) return size;
-        //
-        //size.width = image.getWidth();
-        //size.height = image.getHeight();
-        //
-        //var maxWidth: number = image.getMaxWidth();
-        //var maxHeight: number = image.getMaxHeight();
-        //
-        //var configMaxWidth: number = this.options.maxImageWidth;
-        //
-        //if (maxWidth){
-        //
-        //    if (configMaxWidth){
-        //        maxWidth = Math.min(maxWidth, configMaxWidth);
-        //    }
-        //
-        //    size.width = Math.min(size.width, maxWidth);
-        //    size.height = Math.min(size.height, maxHeight);
-        //}
+        if (!maxSize) return null;
 
-        return size;
+        var finalWidth: number = size.width;
+        var finalHeight: number = size.height;
+
+        // if the maxWidth is less than the advertised width
+        if (!_.isUndefined(maxSize.width) && maxSize.width < size.width){
+            finalWidth = maxSize.width;
+
+            if (!_.isUndefined(maxSize.height)){
+                finalHeight = maxSize.height;
+            } else {
+                // calculate finalHeight
+                var ratio: number = Math.normalise(maxSize.width, 0, size.width);
+                finalHeight = Math.floor(size.height * ratio);
+            }
+        }
+
+        return new Size(finalWidth, finalHeight);
     }
 
     isDownloadOptionAvailable(option: DownloadOption): boolean {
@@ -346,15 +375,24 @@ class DownloadDialogue extends BaseDownloadDialogue {
             case DownloadOption.dynamicCanvasRenderings:
             case DownloadOption.dynamicImageRenderings:
             case DownloadOption.wholeImageHighRes:
-                return !(<ISeadragonProvider>this.provider).isPagingSettingEnabled();
+                if (!(<ISeadragonExtension>this.extension).isPagingSettingEnabled()){
+                    var maxSize: Size = this.getMaxDimensionsForCurrentCanvas();
+                    if (maxSize && _.isUndefined(maxSize.width)){
+                        return true;
+                    } else if (maxSize.width <= this.options.maxImageWidth){
+                        return true;
+                    }
+                }
+                return false;
             case DownloadOption.wholeImageLowResAsJpg:
                 // hide low-res option if hi-res width is smaller than constraint
-                var size: Size = this.getDimensionsForCurrentCanvas();
-                return (!(<ISeadragonProvider>this.provider).isPagingSettingEnabled() && (size.width > this.options.confinedImageSize));
+                var size: Size = this.getComputedDimensionsForCurrentCanvas();
+                if (!size) return false;
+                return (!(<ISeadragonExtension>this.extension).isPagingSettingEnabled() && (size.width > this.options.confinedImageSize));
             case DownloadOption.selection:
                 return this.options.selectionEnabled;
             default:
-                return true;
+                return super.isDownloadOptionAvailable(option);
         }
     }
 }
