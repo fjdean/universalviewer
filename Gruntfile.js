@@ -39,6 +39,7 @@ module.exports = function (grunt) {
 
         clean: {
             build : ['<%= config.dirs.build %>'],
+            bundle: ['./src/lib/bundle.js', './src/lib/bundle.min.js'],
             dist: ['<%= config.dirs.dist %>'],
             examples: ['<%= config.dirs.examples %>/uv-*'],
             distexamples: ['<%= config.dirs.examples %>/uv-*.zip', '<%= config.dirs.examples %>/uv-*.tar'],
@@ -47,7 +48,7 @@ module.exports = function (grunt) {
 
         concat: {
             bundle: {
-                src: grunt.file.expand('src/lib/*').concat(config.deps).concat(['!src/lib/embed.js', '!src/lib/bundle.js']),
+                src: grunt.file.expand('src/lib/*').concat(config.deps).concat(['!src/lib/embed.js']),
                 dest: 'src/lib/bundle.js'
             }
         },
@@ -280,10 +281,16 @@ module.exports = function (grunt) {
             html: {
                 src: ['<%= config.dirs.build %>/app.html'],
                 overwrite: true,
-                replacements: [{
-                    from: 'data-main="app"',
-                    to: 'data-main="lib/app"'
-                }]
+                replacements: [
+                    {
+                        from: 'data-main="app"',
+                        to: 'data-main="lib/app"'
+                    },
+                    {
+                        from: 'lib/bundle.js',
+                        to: 'lib/bundle.min.js'
+                    }
+                ]
             },
             js: {
                 // replace window.DEBUG=true
@@ -430,8 +437,8 @@ module.exports = function (grunt) {
     grunt.registerTask('default', '', function(){
 
         grunt.task.run(
+            'clean:bundle',
             'concat:bundle',
-            'uglify:bundle',
             'typescript:dev',
             'clean:extension',
             'configure:apply',
@@ -452,6 +459,7 @@ module.exports = function (grunt) {
         //if (minify) grunt.config.set('global.minify', '');
 
         grunt.task.run(
+            'uglify:bundle',
             'typescript:dist',
             'clean:extension',
             'configure:apply',
