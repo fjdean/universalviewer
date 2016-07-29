@@ -10,6 +10,7 @@ import Information = require("./Information");
 import InformationAction = require("./InformationAction");
 import InformationArgs = require("./InformationArgs");
 import InformationType = require("./InformationType");
+import IThumb = Manifold.IThumb;
 import LoginDialogue = require("../../modules/uv-dialogues-module/LoginDialogue");
 import LoginWarningMessages = require("./LoginWarningMessages");
 import Params = require("../../Params");
@@ -137,21 +138,23 @@ class BaseExtension implements IExtension {
                 });
             }
 
-            this.$element.on('drop', (e => {
-                e.preventDefault();
-                var dropUrl = (<any>e.originalEvent).dataTransfer.getData("URL");
-                var url = Utils.Urls.getUrlParts(dropUrl);
-                var manifestUri = Utils.Urls.getQuerystringParameterFromString('manifest', url.search);
-                //var canvasUri = Utils.Urls.getQuerystringParameterFromString('canvas', url.search);
+            if (Utils.Bools.getBool(this.config.options.dropEnabled, true)){
+                this.$element.on('drop', (e => {
+                    e.preventDefault();
+                    var dropUrl = (<any>e.originalEvent).dataTransfer.getData("URL");
+                    var url = Utils.Urls.getUrlParts(dropUrl);
+                    var manifestUri = Utils.Urls.getQuerystringParameterFromString('manifest', url.search);
+                    //var canvasUri = Utils.Urls.getQuerystringParameterFromString('canvas', url.search);
 
-                if (manifestUri){
-                    this.triggerSocket(BaseCommands.DROP, manifestUri);
+                    if (manifestUri){
+                        this.triggerSocket(BaseCommands.DROP, manifestUri);
 
-                    var p = new BootstrapParams();
-                    p.manifestUri = manifestUri;
-                    this.reload(p);
-                }
-            }));
+                        var p = new BootstrapParams();
+                        p.manifestUri = manifestUri;
+                        this.reload(p);
+                    }
+                }));
+            }
 
             this.$element.on('dragover', (e => {
                 // allow drop
@@ -493,8 +496,8 @@ class BaseExtension implements IExtension {
             this.triggerSocket(BaseCommands.SHOW_SETTINGS_DIALOGUE);
         });
 
-        $.subscribe(BaseCommands.THUMB_SELECTED, (e, canvasIndex: number) => {
-            this.triggerSocket(BaseCommands.THUMB_SELECTED, canvasIndex);
+        $.subscribe(BaseCommands.THUMB_SELECTED, (e, thumb: IThumb) => {
+            this.triggerSocket(BaseCommands.THUMB_SELECTED, thumb.index);
         });
 
         $.subscribe(BaseCommands.TOGGLE_FULLSCREEN, () => {
@@ -1046,6 +1049,10 @@ class BaseExtension implements IExtension {
         return this.bootstrapper.isFullScreen;
     }
 
+    isHeaderPanelEnabled(): boolean {
+        return Utils.Bools.getBool(this.config.options.headerPanelEnabled, true);
+    }
+
     isLeftPanelEnabled(): boolean {
         if (Utils.Bools.getBool(this.config.options.leftPanelEnabled, true)){
             if (this.helper.hasParentCollection()){
@@ -1062,6 +1069,10 @@ class BaseExtension implements IExtension {
 
     isRightPanelEnabled(): boolean {
         return  Utils.Bools.getBool(this.config.options.rightPanelEnabled, true);
+    }
+
+    isFooterPanelEnabled(): boolean {
+        return Utils.Bools.getBool(this.config.options.footerPanelEnabled, true);
     }
 
     useArrowKeysToNavigate(): boolean {
