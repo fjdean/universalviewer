@@ -120,6 +120,7 @@
         "firstImage": "Delwedd Gyntaf",
         "firstPage": "Tudalen gyntaf",
         "folio": "ffolio",
+        "gallery": "Oriel",
         "go": "GWELD",
         "help": "Cymorth",
         "image": "Delwedd",
@@ -146,7 +147,7 @@
     },
     "seadragonCenterPanel": {
       "content": {
-        "acknowledgements": "Priodoliad",
+        "attribution": "Priodoliad",
         "goHome": "Gweld y maint gwreiddiol",
         "imageUnavailable": "Nid oes delwedd ar gael",
         "next": "nesaf",
