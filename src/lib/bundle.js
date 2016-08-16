@@ -1620,6 +1620,9 @@ var Manifesto;
         ServiceProfile.prototype.printExtensions = function () {
             return new ServiceProfile(ServiceProfile.PRINTEXTENSIONS.toString());
         };
+        ServiceProfile.prototype.shareExtensions = function () {
+            return new ServiceProfile(ServiceProfile.SHAREEXTENSIONS.toString());
+        };
         ServiceProfile.AUTOCOMPLETE = new ServiceProfile("http://iiif.io/api/search/0/autocomplete");
         ServiceProfile.STANFORDIIIFIMAGECOMPLIANCE0 = new ServiceProfile("http://library.stanford.edu/iiif/image-api/compliance.html#level0");
         ServiceProfile.STANFORDIIIFIMAGECOMPLIANCE1 = new ServiceProfile("http://library.stanford.edu/iiif/image-api/compliance.html#level1");
@@ -1656,6 +1659,7 @@ var Manifesto;
         ServiceProfile.TRACKINGEXTENSIONS = new ServiceProfile("http://universalviewer.io/tracking-extensions-profile");
         ServiceProfile.UIEXTENSIONS = new ServiceProfile("http://universalviewer.io/ui-extensions-profile");
         ServiceProfile.PRINTEXTENSIONS = new ServiceProfile("http://universalviewer.io/print-extensions-profile");
+        ServiceProfile.SHAREEXTENSIONS = new ServiceProfile("http://universalviewer.io/share-extensions-profile");
         return ServiceProfile;
     }(Manifesto.StringValue));
     Manifesto.ServiceProfile = ServiceProfile;
@@ -14056,6 +14060,17 @@ var Manifold;
         Helper.prototype.getSequenceByIndex = function (index) {
             return this.manifest.getSequenceByIndex(index);
         };
+        Helper.prototype.getShareServiceUrl = function () {
+            var url;
+            var shareService = this.manifest.getService(manifesto.ServiceProfile.shareExtensions());
+            if (shareService) {
+                if (shareService.length) {
+                    shareService = shareService[0];
+                }
+                url = shareService.__jsonld.shareUrl;
+            }
+            return url;
+        };
         Helper.prototype.getSortedTreeNodesByDate = function (sortedTree, tree) {
             var all = tree.nodes.en().traverseUnique(function (node) { return node.nodes; })
                 .where(function (n) { return n.data.type === manifesto.TreeNodeType.collection().toString() ||
@@ -14168,13 +14183,19 @@ var Manifold;
             return this.getViewingHint().toString() === manifesto.ViewingHint.continuous().toString();
         };
         Helper.prototype.isFirstCanvas = function (index) {
-            return this.getCurrentSequence().isFirstCanvas(index);
+            if (typeof index !== 'undefined') {
+                return this.getCurrentSequence().isFirstCanvas(index);
+            }
+            return this.getCurrentSequence().isFirstCanvas(this.canvasIndex);
         };
         Helper.prototype.isHorizontallyAligned = function () {
             return this.isLeftToRight() || this.isRightToLeft();
         };
         Helper.prototype.isLastCanvas = function (index) {
-            return this.getCurrentSequence().isLastCanvas(index);
+            if (typeof index !== 'undefined') {
+                return this.getCurrentSequence().isLastCanvas(index);
+            }
+            return this.getCurrentSequence().isLastCanvas(this.canvasIndex);
         };
         Helper.prototype.isLeftToRight = function () {
             return this.getViewingDirection().toString() === manifesto.ViewingDirection.leftToRight().toString();
