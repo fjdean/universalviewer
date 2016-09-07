@@ -26,8 +26,8 @@ class SeadragonCenterPanel extends CenterPanel {
     viewer: any;
 
     $goHomeButton: JQuery;
-    $rightButton: JQuery;
-    $leftButton: JQuery;
+    $nextButton: JQuery;
+    $prevButton: JQuery;
     $rotateButton: JQuery;
     $spinner: JQuery;
     $viewer: JQuery;
@@ -86,7 +86,6 @@ class SeadragonCenterPanel extends CenterPanel {
             visibilityRatio: this.config.options.visibilityRatio || 0.5,
             constrainDuringPan: this.config.options.constrainDuringPan || false,
             immediateRender: this.config.options.immediateRender || false,
-            maxZoomLevel: this.config.options.maxZoomLevel || null,
             blendTime: this.config.options.blendTime || 0,
             autoHideControls: this.config.options.autoHideControls == null ? true : this.config.options.autoHideControls,
             prefixUrl: prefixUrl,
@@ -137,22 +136,22 @@ class SeadragonCenterPanel extends CenterPanel {
         });
 
         this.$zoomInButton = this.$viewer.find('div[title="Zoom in"]');
-        this.$zoomInButton.attr('tabindex', 11);
+        this.$zoomInButton.attr('tabindex', 0);
         this.$zoomInButton.prop('title', this.content.zoomIn);
         this.$zoomInButton.addClass('zoomIn');
 
         this.$zoomOutButton = this.$viewer.find('div[title="Zoom out"]');
-        this.$zoomOutButton.attr('tabindex', 12);
+        this.$zoomOutButton.attr('tabindex', 0);
         this.$zoomOutButton.prop('title', this.content.zoomOut);
         this.$zoomOutButton.addClass('zoomOut');
 
         this.$goHomeButton = this.$viewer.find('div[title="Go home"]');
-        this.$goHomeButton.attr('tabindex', 13);
+        this.$goHomeButton.attr('tabindex', 0);
         this.$goHomeButton.prop('title', this.content.goHome);
         this.$goHomeButton.addClass('goHome');
 
         this.$rotateButton = this.$viewer.find('div[title="Rotate right"]');
-        this.$rotateButton.attr('tabindex', 14);
+        this.$rotateButton.attr('tabindex', 0);
         this.$rotateButton.prop('title', this.content.rotateRight);
         this.$rotateButton.addClass('rotate');
         
@@ -182,15 +181,6 @@ class SeadragonCenterPanel extends CenterPanel {
                 this.viewer.setControlsEnabled(false);
             }
         }, this.config.options.controlsFadeAfterInactive);
-
-        this.viewer.world.addHandler('add-item', (item) => {
-            that.items.push(item);
-
-            if (that.items.length === that.extension.resources.length) {
-                $.publish(Commands.SEADRAGON_OPEN);
-                that.openPagesHandler();
-            }
-        });
 
         this.viewer.addHandler('tile-drawn', () => {
             this.$spinner.hide();
@@ -234,8 +224,8 @@ class SeadragonCenterPanel extends CenterPanel {
 
         //if (browser == 'Firefox') {
         //    if (this.provider.isMultiCanvas()){
-        //        this.$leftButton.hide();
-        //        this.$rightButton.hide();
+        //        this.$prevButton.hide();
+        //        this.$nextButton.hide();
         //    }
         //    this.$rotateButton.hide();
         //}
@@ -247,26 +237,37 @@ class SeadragonCenterPanel extends CenterPanel {
 
     createNavigationButtons() {
 
-        this.$leftButton = $('<div class="paging btn prev"></div>');
-        this.$leftButton.prop('title', this.content.previous);
-        this.viewer.addControl(this.$leftButton[0], {anchor: OpenSeadragon.ControlAnchor.TOP_LEFT});
+        var viewingDirection: Manifesto.ViewingDirection = this.extension.helper.getViewingDirection();
 
-        this.$rightButton = $('<div class="paging btn next"></div>');
-        this.$rightButton.prop('title', this.content.next);
-        this.viewer.addControl(this.$rightButton[0], {anchor: OpenSeadragon.ControlAnchor.TOP_RIGHT});
+        this.$prevButton = $('<div class="paging btn prev" tabindex="0"></div>');
+        this.$prevButton.prop('title', this.content.previous);
+
+        this.$nextButton = $('<div class="paging btn next" tabindex="0"></div>');
+        this.$nextButton.prop('title', this.content.next);
+        
+        this.viewer.addControl(this.$prevButton[0], {anchor: OpenSeadragon.ControlAnchor.TOP_LEFT});
+        this.viewer.addControl(this.$nextButton[0], {anchor: OpenSeadragon.ControlAnchor.TOP_RIGHT});
+
+        switch (viewingDirection.toString()){
+            case manifesto.ViewingDirection.bottomToTop().toString() :
+            case manifesto.ViewingDirection.topToBottom().toString() :
+                this.$prevButton.addClass('vertical');
+                this.$nextButton.addClass('vertical');;
+                break;
+        }
 
         var that = this;
 
-        var viewingDirection: Manifesto.ViewingDirection = this.extension.helper.getViewingDirection();
-
-        this.$leftButton.on('touchstart click', (e) => {
+        this.$prevButton.onPressed((e) => {
             e.preventDefault();
             OpenSeadragon.cancelEvent(e);
 
             if (!that.prevButtonEnabled) return;
 
             switch (viewingDirection.toString()){
-                case manifesto.ViewingDirection.leftToRight().toString():
+                case manifesto.ViewingDirection.leftToRight().toString() :
+                case manifesto.ViewingDirection.bottomToTop().toString() :
+                case manifesto.ViewingDirection.topToBottom().toString() :
                     $.publish(Commands.PREV);
                     break;
                 case manifesto.ViewingDirection.rightToLeft().toString() :
@@ -275,14 +276,16 @@ class SeadragonCenterPanel extends CenterPanel {
             }
         });
 
-        this.$rightButton.on('touchstart click', (e) => {
+        this.$nextButton.onPressed((e) => {
             e.preventDefault();
             OpenSeadragon.cancelEvent(e);
 
             if (!that.nextButtonEnabled) return;
 
             switch (viewingDirection.toString()){
-                case manifesto.ViewingDirection.leftToRight().toString():
+                case manifesto.ViewingDirection.leftToRight().toString() :
+                case manifesto.ViewingDirection.bottomToTop().toString() :
+                case manifesto.ViewingDirection.topToBottom().toString() :
                     $.publish(Commands.NEXT);
                     break;
                 case manifesto.ViewingDirection.rightToLeft().toString() :
@@ -311,7 +314,14 @@ class SeadragonCenterPanel extends CenterPanel {
                     tileSource: resource,
                     x: resource.x,
                     y: resource.y,
-                    width: resource.width
+                    width: resource.width,
+                    success: (item) => {
+                        this.items.push(item);
+                        if (this.items.length === resources.length) {
+                            this.viewer.viewport.maxZoomLevel = this.viewer.viewport.getZoom(true) * (this.config.options.maxZoomLevel || 8);
+                            this.openPagesHandler();
+                        }
+                    }
                 });
             }
         });
@@ -539,16 +549,32 @@ class SeadragonCenterPanel extends CenterPanel {
 
             $('.navigator').addClass('extraMargin');
 
-            if (!this.extension.helper.isFirstCanvas()) {
-                this.enablePrevButton();
-            } else {
-                this.disablePrevButton();
-            }
+            var viewingDirection: Manifesto.ViewingDirection = this.extension.helper.getViewingDirection();
 
-            if (!this.extension.helper.isLastCanvas()) {
-                this.enableNextButton();
+            if (viewingDirection.toString() === manifesto.ViewingDirection.rightToLeft().toString()) {
+                if (this.extension.helper.isFirstCanvas()) {
+                    this.disableNextButton();
+                } else {
+                    this.enableNextButton();
+                }
+
+                if (this.extension.helper.isLastCanvas()) {
+                    this.disablePrevButton();
+                } else {
+                    this.enablePrevButton();
+                }
             } else {
-                this.disableNextButton();
+                if (this.extension.helper.isFirstCanvas()) {
+                    this.disablePrevButton();                    
+                } else {
+                    this.enablePrevButton();
+                }
+
+                if (this.extension.helper.isLastCanvas()) {
+                    this.disableNextButton();
+                } else {
+                    this.enableNextButton();
+                }
             }
         }
         
@@ -580,42 +606,42 @@ class SeadragonCenterPanel extends CenterPanel {
 
     disablePrevButton(): void {
         this.prevButtonEnabled = false;
-        this.$leftButton.addClass('disabled');
+        this.$prevButton.addClass('disabled');
     }
 
     enablePrevButton(): void {
         this.prevButtonEnabled = true;
-        this.$leftButton.removeClass('disabled');
+        this.$prevButton.removeClass('disabled');
     }
 
     hidePrevButton(): void {
         this.disablePrevButton();
-        this.$leftButton.hide();
+        this.$prevButton.hide();
     }
 
     showPrevButton(): void {
         this.enablePrevButton();
-        this.$leftButton.show();
+        this.$prevButton.show();
     }
 
     disableNextButton(): void {
         this.nextButtonEnabled = false;
-        this.$rightButton.addClass('disabled');
+        this.$nextButton.addClass('disabled');
     }
 
     enableNextButton(): void {
         this.nextButtonEnabled = true;
-        this.$rightButton.removeClass('disabled');
+        this.$nextButton.removeClass('disabled');
     }
 
     hideNextButton(): void {
         this.disableNextButton();
-        this.$rightButton.hide();
+        this.$nextButton.hide();
     }
 
     showNextButton(): void {
         this.enableNextButton();
-        this.$rightButton.show();
+        this.$nextButton.show();
     }
 
     serialiseBounds(bounds): string{
@@ -750,9 +776,30 @@ class SeadragonCenterPanel extends CenterPanel {
         this.$spinner.css('top', (this.$content.height() / 2) - (this.$spinner.height() / 2));
         this.$spinner.css('left', (this.$content.width() / 2) - (this.$spinner.width() / 2));
 
-        if (this.extension.helper.isMultiCanvas() && this.$leftButton && this.$rightButton) {
-            this.$leftButton.css('top', (this.$content.height() - this.$leftButton.height()) / 2);
-            this.$rightButton.css('top', (this.$content.height() - this.$rightButton.height()) / 2);
+        var viewingDirection: Manifesto.ViewingDirection = this.extension.helper.getViewingDirection();
+
+        if (this.extension.helper.isMultiCanvas() && this.$prevButton && this.$nextButton) {
+
+            var verticalButtonPos: number = Math.floor(this.$content.width() / 2);
+
+            switch (viewingDirection.toString()){
+                case manifesto.ViewingDirection.bottomToTop().toString() :
+                    this.$prevButton.addClass('down');
+                    this.$nextButton.addClass('up');
+                    this.$prevButton.css('left', verticalButtonPos - (this.$prevButton.outerWidth() / 2));
+                    this.$prevButton.css('top', (this.$content.height() - this.$prevButton.height()));
+                    this.$nextButton.css('left', (verticalButtonPos * -1) - (this.$nextButton.outerWidth() / 2));
+                    break;
+                case manifesto.ViewingDirection.topToBottom().toString() :
+                    this.$prevButton.css('left', verticalButtonPos - (this.$prevButton.outerWidth() / 2));
+                    this.$nextButton.css('left', (verticalButtonPos * -1) - (this.$nextButton.outerWidth() / 2));
+                    this.$nextButton.css('top', (this.$content.height() - this.$nextButton.height()));
+                    break;
+                default :
+                    this.$prevButton.css('top', (this.$content.height() - this.$prevButton.height()) / 2);
+                    this.$nextButton.css('top', (this.$content.height() - this.$nextButton.height()) / 2);
+                    break;
+            }
         }
 
         // stretch navigator, allowing time for OSD to resize

@@ -63,7 +63,7 @@ class FooterPanel extends BaseFooterPanel {
             this.setCurrentSearchResultPlacemarker();
         });
 
-        this.$printButton = $('<a class="print" title="' + this.content.print + '">' + this.content.print + '</a>');
+        this.$printButton = $('<a class="print" title="' + this.content.print + '" tabindex="0">' + this.content.print + '</a>');
         this.$options.prepend(this.$printButton);
 
         // search input.
@@ -82,7 +82,7 @@ class FooterPanel extends BaseFooterPanel {
         this.$searchText = $('<input class="searchText" type="text" maxlength="100" value="' + this.content.enterKeyword + '" />');
         this.$searchTextContainer.append(this.$searchText);
 
-        this.$searchButton = $('<a class="imageButton searchButton"></a>');
+        this.$searchButton = $('<a class="imageButton searchButton" tabindex="0"></a>');
         this.$searchTextContainer.append(this.$searchButton);
 
         // search results.

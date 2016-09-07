@@ -138,10 +138,10 @@ class ContentLeftPanel extends LeftPanel {
         this.$tabs = $('<div class="tabs"></div>');
         this.$main.append(this.$tabs);
 
-        this.$treeButton = $('<a class="index tab">' + this.content.index + '</a>');
+        this.$treeButton = $('<a class="index tab" tabindex="0">' + this.content.index + '</a>');
         this.$tabs.append(this.$treeButton);
 
-        this.$thumbsButton = $('<a class="thumbs tab">' + this.content.thumbnails + '</a>');
+        this.$thumbsButton = $('<a class="thumbs tab" tabindex="0">' + this.content.thumbnails + '</a>');
         this.$thumbsButton.prop('title', this.content.thumbnails);
         this.$tabs.append(this.$thumbsButton);
 
@@ -175,20 +175,20 @@ class ContentLeftPanel extends LeftPanel {
         this.$sortButtonGroup = $('<div class="btn-group"></div>');
         this.$treeViewOptions.append(this.$sortButtonGroup);
 
-        this.$sortByDateButton = $('<button class="btn">' + this.content.date + '</button>');
+        this.$sortByDateButton = $('<button class="btn tabindex="0"">' + this.content.date + '</button>');
         this.$sortButtonGroup.append(this.$sortByDateButton);
 
-        this.$sortByVolumeButton = $('<button class="btn">' + this.content.volume + '</button>');
+        this.$sortByVolumeButton = $('<button class="btn" tabindex="0">' + this.content.volume + '</button>');
         this.$sortButtonGroup.append(this.$sortByVolumeButton);
 
         this.$multiSelectOptions = $('<div class="multiSelect"></div>');
         this.$rightOptions.append(this.$multiSelectOptions);
 
-        this.$selectAllButton = $('<div class="multiSelectAll"><input id="multiSelectAll" type="checkbox" /><label for="multiSelectAll">' + this.content.selectAll + '</label></div>');
+        this.$selectAllButton = $('<div class="multiSelectAll"><input id="multiSelectAll" type="checkbox" tabindex="0" /><label for="multiSelectAll">' + this.content.selectAll + '</label></div>');
         this.$multiSelectOptions.append(this.$selectAllButton);
         this.$selectAllButtonCheckbox = $(this.$selectAllButton.find('input:checkbox'));
 
-        this.$selectButton = $('<a class="btn btn-primary">' + this.content.select + '</a>');
+        this.$selectButton = $('<a class="btn btn-primary" tabindex="0">' + this.content.select + '</a>');
         this.$multiSelectOptions.append(this.$selectButton);
 
         this.$views = $('<div class="views"></div>');
@@ -197,7 +197,7 @@ class ContentLeftPanel extends LeftPanel {
         this.$treeView = $('<div class="treeView"></div>');
         this.$views.append(this.$treeView);
 
-        this.$thumbsView = $('<div class="thumbsView"></div>');
+        this.$thumbsView = $('<div class="thumbsView" tabindex="0"></div>');
         this.$views.append(this.$thumbsView);
 
         this.$galleryView = $('<div class="galleryView"></div>');
@@ -253,10 +253,6 @@ class ContentLeftPanel extends LeftPanel {
 
             $.publish(Commands.MULTISELECTION_MADE, [ids]);
         });
-
-        this.$expandButton.attr('tabindex', '7');
-        this.$collapseButton.attr('tabindex', '7');
-        this.$expandFullButton.attr('tabindex', '8');
 
         this.setTitle(this.content.title);
 
@@ -397,6 +393,10 @@ class ContentLeftPanel extends LeftPanel {
         }
     }
 
+    getViewingDirection(): string {
+        return this.extension.helper.getViewingDirection().toString();
+    }
+
     createThumbsView(): void {
         this.thumbsView = new ThumbsView(this.$thumbsView);
         this.databindThumbsView();
@@ -406,7 +406,7 @@ class ContentLeftPanel extends LeftPanel {
         if (!this.thumbsView) return;
         var width, height;
 
-        var viewingDirection = this.extension.helper.getViewingDirection().toString();
+        var viewingDirection: string = this.getViewingDirection();
 
         if (viewingDirection === manifesto.ViewingDirection.topToBottom().toString() || viewingDirection === manifesto.ViewingDirection.bottomToTop().toString()){
             width = this.config.options.oneColThumbWidth;
@@ -416,7 +416,14 @@ class ContentLeftPanel extends LeftPanel {
             height = this.config.options.twoColThumbHeight;
         }
 
-        this.thumbsView.thumbs = <IThumb[]>this.extension.helper.getThumbs(width, height);
+        var thumbs: IThumb[] = <IThumb[]>this.extension.helper.getThumbs(width, height);
+
+        if (viewingDirection === manifesto.ViewingDirection.bottomToTop().toString()){
+            thumbs.reverse();
+        }
+
+        this.thumbsView.thumbs = thumbs;
+
         this.thumbsView.databind();
     }
 
@@ -430,7 +437,17 @@ class ContentLeftPanel extends LeftPanel {
         if (!this.galleryView) return;
         var width = this.config.options.galleryThumbWidth;
         var height = this.config.options.galleryThumbHeight;
-        this.galleryView.thumbs = <IThumb[]>this.extension.helper.getThumbs(width, height);
+
+        var thumbs: IThumb[] = <IThumb[]>this.extension.helper.getThumbs(width, height);
+
+        var viewingDirection: string = this.getViewingDirection();
+
+        if (viewingDirection === manifesto.ViewingDirection.bottomToTop().toString()){
+            thumbs.reverse();
+        }
+
+        this.galleryView.thumbs = thumbs;
+
         this.galleryView.databind();
         // ensure gallery has current multiselect state
         this.updateMultiSelectState();
@@ -475,14 +492,6 @@ class ContentLeftPanel extends LeftPanel {
             } else if (treeEnabled){
                 this.openTreeView();
             }
-        }
-
-        if (this.isExpanded){
-            this.$treeButton.attr('tabindex', '9');
-            this.$thumbsButton.attr('tabindex', '10');
-        } else {
-            this.$treeButton.attr('tabindex', '');
-            this.$thumbsButton.attr('tabindex', '');
         }
     }
 

@@ -30,8 +30,6 @@ import Settings = require("../../modules/uv-shared-module/Settings");
 import SettingsDialogue = require("./SettingsDialogue");
 import Shell = require("../../modules/uv-shared-module/Shell");
 import Size = Utils.Measurements.Size;
-import ThumbsView = require("../../modules/uv-contentleftpanel-module/ThumbsView");
-import TreeView = require("../../modules/uv-contentleftpanel-module/TreeView");
 
 class Extension extends BaseExtension implements ISeadragonExtension {
 
@@ -227,8 +225,9 @@ class Extension extends BaseExtension implements ISeadragonExtension {
         });
 
         $.subscribe(Commands.SEADRAGON_OPEN, () => {
-            if (!this.useArrowKeysToNavigate())
+            if (!this.useArrowKeysToNavigate()){
                 this.centerPanel.setFocus();
+            }
         });
 
         $.subscribe(Commands.SEADRAGON_RESIZE, () => {
