@@ -2784,6 +2784,12 @@ input[type=range]:focus::-ms-fill-upper {
 #app .headerPanel .options .centerOptions {
   width: 390px;
 }
+#app .headerPanel .options .centerOptions .mode label {
+  width: 38px;
+}
+#app .centerPanel .content .searchOverlay {
+  background-color: #05f7f9 ;
+}
 #app .overlay .top .close {
   background-image: url('../../img/close.png');
   background-repeat: no-repeat;
