@@ -1,11 +1,13 @@
 import BaseCommands = require("./BaseCommands");
 import BaseView = require("./BaseView");
+import Metrics = require("./Metrics");
 
 class FooterPanel extends BaseView {
 
     $feedbackButton: JQuery;
     $bookmarkButton: JQuery;
     $downloadButton: JQuery;
+    $moreInfoButton: JQuery;
     $shareButton: JQuery;
     $embedButton: JQuery;
     $openButton: JQuery;
@@ -25,12 +27,19 @@ class FooterPanel extends BaseView {
             this.updateFullScreenButton();
         });
 
+        $.subscribe(BaseCommands.METRIC_CHANGED, () => {
+            this.updateMinimisedButtons();
+        });
+
         $.subscribe(BaseCommands.SETTINGS_CHANGED, () => {
             this.updateDownloadButton();
         });
 
         this.$options = $('<div class="options"></div>');
         this.$element.append(this.$options);
+
+        this.$moreInfoButton = $('<a href="#" class="moreInfo" title="' + this.content.moreInfo + '" tabindex="0">' + this.content.moreInfo + '</a>');
+        this.$options.append(this.$moreInfoButton);
 
         this.$feedbackButton = $('<a class="feedback" title="' + this.content.feedback + '" tabindex="0">' + this.content.feedback + '</a>');
         this.$options.prepend(this.$feedbackButton);
@@ -74,7 +83,6 @@ class FooterPanel extends BaseView {
         });
 
         this.$downloadButton.onPressed(() => {
-            //e.preventDefault(); why was on click and preventDefault needed?
             $.publish(BaseCommands.SHOW_DOWNLOAD_DIALOGUE);
         });
 
@@ -87,6 +95,7 @@ class FooterPanel extends BaseView {
             this.$embedButton.hide();
         }
 
+        this.updateMoreInfoButton();
         this.updateOpenButton();
         this.updateFeedbackButton();
         this.updateBookmarkButton();
@@ -94,9 +103,32 @@ class FooterPanel extends BaseView {
         this.updateDownloadButton();
         this.updateFullScreenButton();
         this.updateShareButton();
+        this.updateMinimisedButtons();
+    }
 
+    updateMinimisedButtons(): void {
+        
+        // if configured to always minimise buttons
         if (Utils.Bools.getBool(this.options.minimiseButtons, false)){
             this.$options.addClass('minimiseButtons');
+            return;
+        }
+
+        // otherwise, check metric
+        if (this.extension.metric === Metrics.MOBILE_LANDSCAPE) {
+            this.$options.addClass('minimiseButtons');
+        } else {
+            this.$options.removeClass('minimiseButtons');
+        }
+    }
+
+    updateMoreInfoButton(): void {
+        var configEnabled = Utils.Bools.getBool(this.options.moreInfoEnabled, false);
+
+        if (configEnabled && this.extension.metric === Metrics.MOBILE_LANDSCAPE){
+            this.$moreInfoButton.show();
+        } else {
+            this.$moreInfoButton.hide();
         }
     }
 

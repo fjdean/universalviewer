@@ -13,6 +13,7 @@
 @import 'overlays';
 @import 'iiif-gallery-component';
 @import 'iiif-tree-component';
+@import 'mobile';
 
 @img-path: '../../../modules/uv-shared-module/img/';
 
@@ -86,6 +87,10 @@
         margin-bottom: 0px;
         margin-left: @panel-margin;
     }
+
+    .footerPanel.mobile {
+        display: none;
+    }
 }
 
 @media print {
@@ -104,6 +109,10 @@
        }
 
        .footerPanel {
+           display: none;
+       }
+
+       .mobileFooter {
            display: none;
        }
    }

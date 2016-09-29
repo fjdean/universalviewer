@@ -6,7 +6,6 @@ import Commands = require("./Commands");
 import ContentLeftPanel = require("../../modules/uv-contentleftpanel-module/ContentLeftPanel");
 import CroppedImageDimensions = require("./CroppedImageDimensions");
 import DownloadDialogue = require("./DownloadDialogue");
-import ShareDialogue = require("./ShareDialogue");
 import ExternalContentDialogue = require("../../modules/uv-dialogues-module/ExternalContentDialogue");
 import ExternalResource = Manifesto.IExternalResource;
 import FooterPanel = require("../../modules/uv-searchfooterpanel-module/FooterPanel");
@@ -16,19 +15,22 @@ import ISeadragonExtension = require("./ISeadragonExtension");
 import IThumb = Manifold.IThumb;
 import ITreeNode = Manifold.ITreeNode;
 import LeftPanel = require("../../modules/uv-shared-module/LeftPanel");
+import Metrics = require("../../modules/uv-shared-module/Metrics");
+import MobileFooterPanel = require("../../modules/uv-osdmobilefooterpanel-module/MobileFooter");
 import Mode = require("./Mode");
 import MoreInfoRightPanel = require("../../modules/uv-moreinforightpanel-module/MoreInfoRightPanel");
 import MultiSelectDialogue = require("../../modules/uv-multiselectdialogue-module/MultiSelectDialogue");
+import MultiSelectionArgs = require("./MultiSelectionArgs");
 import PagingHeaderPanel = require("../../modules/uv-pagingheaderpanel-module/PagingHeaderPanel");
 import Params = require("../../Params");
 import Point = require("../../modules/uv-shared-module/Point");
-import MultiSelectionArgs = require("./MultiSelectionArgs");
 import RightPanel = require("../../modules/uv-shared-module/RightPanel");
 import SeadragonCenterPanel = require("../../modules/uv-seadragoncenterpanel-module/SeadragonCenterPanel");
 import SearchResult = require("./SearchResult");
 import SearchResultRect = require("./SearchResultRect");
 import Settings = require("../../modules/uv-shared-module/Settings");
 import SettingsDialogue = require("./SettingsDialogue");
+import ShareDialogue = require("./ShareDialogue");
 import Shell = require("../../modules/uv-shared-module/Shell");
 import Size = Utils.Measurements.Size;
 
@@ -50,6 +52,7 @@ class Extension extends BaseExtension implements ISeadragonExtension {
     helpDialogue: HelpDialogue;
     iiifImageUriTemplate: string = '{0}/{1}/{2}/{3}/{4}/{5}.jpg';
     leftPanel: ContentLeftPanel;
+    mobileFooterPanel: MobileFooterPanel;
     mode: Mode;
     multiSelectDialogue: MultiSelectDialogue;
     rightPanel: MoreInfoRightPanel;
@@ -64,6 +67,18 @@ class Extension extends BaseExtension implements ISeadragonExtension {
         super.create(overrideDependencies);
 
         var that = this;
+
+        $.subscribe(BaseCommands.METRIC_CHANGED, () => {
+            if (this.metric === Metrics.MOBILE_LANDSCAPE) {
+                var settings: ISettings = {};
+                settings.pagingEnabled = false;
+                this.updateSettings(settings);
+                $.publish(BaseCommands.UPDATE_SETTINGS);
+                Shell.$rightPanel.hide();
+            } else {
+                Shell.$rightPanel.show();
+            }
+        });
 
         $.subscribe(Commands.CLEAR_SEARCH, (e) => {
             this.triggerSocket(Commands.CLEAR_SEARCH);
@@ -118,9 +133,14 @@ class Extension extends BaseExtension implements ISeadragonExtension {
             }
         });
 
+        $.subscribe(BaseCommands.LEFTPANEL_COLLAPSE_FULL_START, (e) => {
+            if (this.metric !== Metrics.MOBILE_LANDSCAPE) {
+                Shell.$rightPanel.show();
+            }
+        });
+
         $.subscribe(BaseCommands.LEFTPANEL_COLLAPSE_FULL_FINISH, (e) => {
-            Shell.$centerPanel.show();
-            Shell.$rightPanel.show();
+            Shell.$centerPanel.show();            
             this.resize();
         });
 
@@ -224,8 +244,8 @@ class Extension extends BaseExtension implements ISeadragonExtension {
 
             this.triggerSocket(Commands.CURRENT_VIEW_URI,
                 {
-                    "cropUri": this.getCroppedImageUri(canvas, this.getViewer()),
-                    "fullUri": this.getConfinedImageUri(canvas, canvas.getWidth())
+                    cropUri: this.getCroppedImageUri(canvas, this.getViewer()),
+                    fullUri: this.getConfinedImageUri(canvas, canvas.getWidth())
                 });
         });
 
@@ -328,6 +348,7 @@ class Extension extends BaseExtension implements ISeadragonExtension {
 
         if (this.isFooterPanelEnabled()){
             this.footerPanel = new FooterPanel(Shell.$footerPanel);
+            this.mobileFooterPanel = new MobileFooterPanel(Shell.$mobileFooterPanel);
         } else {
             Shell.$footerPanel.hide();
         }
@@ -540,12 +561,13 @@ class Extension extends BaseExtension implements ISeadragonExtension {
     }
 
     print(): void {
-        var args: MultiSelectionArgs = new MultiSelectionArgs();
-        args.manifestUri = this.helper.iiifResourceUri;
-        args.allCanvases = true;
-        args.format = this.config.options.printMimeType;
-        args.sequence = this.helper.getCurrentSequence().id;
-        this.triggerSocket(Commands.PRINT, args);
+        // var args: MultiSelectionArgs = new MultiSelectionArgs();
+        // args.manifestUri = this.helper.iiifResourceUri;
+        // args.allCanvases = true;
+        // args.format = this.config.options.printMimeType;
+        // args.sequence = this.helper.getCurrentSequence().id;
+        window.print();
+        this.triggerSocket(Commands.PRINT);
     }
 
     getCroppedImageDimensions(canvas: Manifesto.ICanvas, viewer: any): CroppedImageDimensions {

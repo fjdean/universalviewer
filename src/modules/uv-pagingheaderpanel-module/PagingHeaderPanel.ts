@@ -60,11 +60,11 @@ class PagingHeaderPanel extends HeaderPanel {
         });
         
         $.subscribe(BaseCommands.LEFTPANEL_EXPAND_FULL_START, (e) => {
-            this.$galleryButton.addClass('on');
+            this.openGallery();
         });
 
         $.subscribe(BaseCommands.LEFTPANEL_COLLAPSE_FULL_START, (e) => {
-            this.$galleryButton.removeClass('on');
+            this.closeGallery();
         });
 
         this.$prevOptions = $('<div class="prevOptions"></div>');
@@ -95,7 +95,7 @@ class PagingHeaderPanel extends HeaderPanel {
         this.$searchText = $('<input class="searchText" maxlength="50" type="text" tabindex="0"/>');
         this.$search.append(this.$searchText);
 
-        if (this.options.autoCompleteBoxEnabled === true) {
+        if (Utils.Bools.getBool(this.options.autoCompleteBoxEnabled, true)) {
             this.$searchText.hide();
             this.$autoCompleteBox = $('<input class="autocompleteText" type="text" maxlength="100" />');
             this.$search.append(this.$autoCompleteBox);
@@ -133,7 +133,7 @@ class PagingHeaderPanel extends HeaderPanel {
                 300,
                 0
             );
-        } else if (this.options.imageSelectionBoxEnabled === true) {
+        } else if (Utils.Bools.getBool(this.options.imageSelectionBoxEnabled, true)) {
             this.$selectionBoxOptions = $('<div class="image-selectionbox-options"></div>');
             this.$centerOptions.append(this.$selectionBoxOptions);
             this.$imageSelectionBox = $('<select class="image-selectionbox" name="image-select" tabindex="0" ></select>');
@@ -352,6 +352,17 @@ class PagingHeaderPanel extends HeaderPanel {
         if (!Utils.Bools.getBool(this.options.pagingToggleEnabled, true)){
             this.$pagingToggleButtons.hide();
         }
+    }
+
+    openGallery(): void {
+        this.$oneUpButton.removeClass('on');
+        this.$twoUpButton.removeClass('on');
+        this.$galleryButton.addClass('on');
+    }
+
+    closeGallery(): void {
+        this.updatePagingToggle();
+        this.$galleryButton.removeClass('on');
     }
 
     isPageModeEnabled(): boolean {

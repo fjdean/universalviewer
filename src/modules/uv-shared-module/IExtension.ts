@@ -1,5 +1,6 @@
 import Bootstrapper = require("../../Bootstrapper");
 import BootstrapParams = require("../../BootstrapParams");
+import Metric = require("./Metric");
 import Params = require("../../Params");
 
 interface IExtension{
@@ -21,6 +22,7 @@ interface IExtension{
     getDomain(): string;
     getEmbedDomain(): string;
     getExternalResources(resources?: Manifesto.IExternalResource[]): Promise<Manifesto.IExternalResource[]>;
+    getIIIFShareUrl(): string;
     getLocales(): any[];
     getPagedIndices(canvasIndex?: number): number[];
     getParam(key: Params): any;
@@ -50,6 +52,7 @@ interface IExtension{
     loadDependencies(deps: any): void;
     locale: string;
     locales: any[];
+    metric: Metric;
     mouseX: number;
     mouseY: number;
     name: string;
