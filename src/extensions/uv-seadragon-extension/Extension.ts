@@ -18,6 +18,7 @@ import LeftPanel = require("../../modules/uv-shared-module/LeftPanel");
 import Metrics = require("../../modules/uv-shared-module/Metrics");
 import MobileFooterPanel = require("../../modules/uv-osdmobilefooterpanel-module/MobileFooter");
 import Mode = require("./Mode");
+import MoreInfoDialogue = require("../../modules/uv-dialogues-module/MoreInfoDialogue");
 import MoreInfoRightPanel = require("../../modules/uv-moreinforightpanel-module/MoreInfoRightPanel");
 import MultiSelectDialogue = require("../../modules/uv-multiselectdialogue-module/MultiSelectDialogue");
 import MultiSelectionArgs = require("./MultiSelectionArgs");
@@ -37,15 +38,15 @@ import Size = Utils.Measurements.Size;
 class Extension extends BaseExtension implements ISeadragonExtension {
 
     $downloadDialogue: JQuery;
-    $shareDialogue: JQuery;
     $externalContentDialogue: JQuery;
     $helpDialogue: JQuery;
+    $moreInfoDialogue: JQuery;
     $multiSelectDialogue: JQuery;
     $settingsDialogue: JQuery;
+    $shareDialogue: JQuery;
     centerPanel: SeadragonCenterPanel;
     currentRotation: number = 0;
     downloadDialogue: DownloadDialogue;
-    shareDialogue: ShareDialogue;
     externalContentDialogue: ExternalContentDialogue;
     footerPanel: FooterPanel;
     headerPanel: PagingHeaderPanel;
@@ -54,10 +55,12 @@ class Extension extends BaseExtension implements ISeadragonExtension {
     leftPanel: ContentLeftPanel;
     mobileFooterPanel: MobileFooterPanel;
     mode: Mode;
+    moreInfoDialogue: MoreInfoDialogue;
     multiSelectDialogue: MultiSelectDialogue;
     rightPanel: MoreInfoRightPanel;
     searchResults: SearchResult[] = [];
     settingsDialogue: SettingsDialogue;
+    shareDialogue: ShareDialogue;
 
     constructor(bootstrapper: BootStrapper) {
         super(bootstrapper);
@@ -320,6 +323,7 @@ class Extension extends BaseExtension implements ISeadragonExtension {
             return this.centerPanel && this.centerPanel.isCreated;
         }, () => {
             this.checkForSearchParam();
+            this.checkForRotationParam();
         });
     }
 
@@ -356,6 +360,10 @@ class Extension extends BaseExtension implements ISeadragonExtension {
         this.$helpDialogue = $('<div class="overlay help"></div>');
         Shell.$overlays.append(this.$helpDialogue);
         this.helpDialogue = new HelpDialogue(this.$helpDialogue);
+
+        this.$moreInfoDialogue = $('<div class="overlay moreInfo"></div>');
+        Shell.$overlays.append(this.$moreInfoDialogue);
+        this.moreInfoDialogue = new MoreInfoDialogue(this.$moreInfoDialogue);
 
         this.$multiSelectDialogue = $('<div class="overlay multiSelect"></div>');
         Shell.$overlays.append(this.$multiSelectDialogue);
@@ -404,6 +412,17 @@ class Extension extends BaseExtension implements ISeadragonExtension {
             if (highlight){
                 highlight.replace(/\+/g, " ").replace(/"/g, "");
                 $.publish(Commands.SEARCH, [highlight]);
+            }
+        }
+    }
+    checkForRotationParam(): void{
+        // if a rotation value is in the hash params, set currentRotation
+        if (this.isDeepLinkingEnabled()){
+
+            var rotation: number = Number(this.getParam(Params.rotation));
+
+            if (rotation){
+                $.publish(Commands.SEADRAGON_ROTATION, [rotation]);
             }
         }
     }
@@ -605,6 +624,21 @@ class Extension extends BaseExtension implements ISeadragonExtension {
         width = Math.min(width, canvas.getWidth());
         height = Math.min(height, canvas.getHeight());       
 
+        if (canvas.externalResource.data && canvas.externalResource.data.profile[1]){
+          var maxSize: Size =  new Size(canvas.externalResource.data.profile[1].maxWidth, canvas.externalResource.data.profile[1].maxHeight);
+          if (!_.isUndefined(maxSize.width) && maxSize.width < width){
+            width = maxSize.width;
+
+            if (!_.isUndefined(maxSize.height)){
+                height = maxSize.height;
+            } else {
+                // calculate new height
+                var ratio: number = Math.normalise(maxSize.width, 0, width);
+                height = Math.floor(height * ratio);
+            }
+          } 
+        }
+
         dimensions.region = new Size(width, height);
         dimensions.regionPos = new Point(x, y);
         dimensions.size = new Size(width, height);
@@ -694,7 +728,7 @@ class Extension extends BaseExtension implements ISeadragonExtension {
         var id = this.getImageId(canvas);
         var region = dimensions.regionPos.x + "," + dimensions.regionPos.y + "," + dimensions.region.width + "," + dimensions.region.height;
         var size = dimensions.size.width + ',' + dimensions.size.height;
-        var rotation = 0;
+        var rotation = this.getViewerRotation();
         var quality = 'default';
         return String.format(this.iiifImageUriTemplate, baseUri, id, region, size, rotation, quality);
     }
@@ -715,7 +749,7 @@ class Extension extends BaseExtension implements ISeadragonExtension {
         var region = 'full';
         var dimensions = this.getConfinedImageDimensions(canvas, width);
         var size: string = dimensions.width + ',' + dimensions.height;
-        var rotation = 0;
+        var rotation = this.getViewerRotation();
         var quality = 'default';
         var uri = String.format(this.iiifImageUriTemplate, baseUri, id, region, size, rotation, quality);
         return uri;
