@@ -2941,7 +2941,7 @@ input[type=range]:focus::-ms-fill-upper {
   }
   #app .footerPanel.mobile .options .spacer {
     float: left;
-    width: 50px;
+    width: 30px;
     height: 41px;
   }
   #app .footerPanel.mobile .options a {
@@ -3051,13 +3051,19 @@ input[type=range]:focus::-ms-fill-upper {
   }
 }
 #app .headerPanel .options .centerOptions {
-  width: 390px;
+  width: 432px;
+}
+#app .headerPanel .options .centerOptions .prevOptions {
+  margin: 0 10px 0 0;
 }
 #app .headerPanel .options .centerOptions .mode label {
-  width: 38px;
+  width: 42px;
 }
-#app .centerPanel .content .searchOverlay {
-  background-color: #05f7f9 ;
+#app .headerPanel .options .centerOptions .search {
+  width: 140px;
+}
+#app .headerPanel .options .centerOptions .nextOptions {
+  margin: 0 0 0 10px;
 }
 #app .overlay .top .close {
   background-image: url('../../img/close.png');
@@ -3113,7 +3119,7 @@ input[type=range]:focus::-ms-fill-upper {
   margin-top: 0px;
 }
 #app .footerPanel .searchPager .controls .searchResultsInfo {
-  width: 337px;
+  width: 290px;
 }
 #app .footerPanel .searchResults .searchResultPlacemarker {
   background: url('../../img/placemarker_down.png');
