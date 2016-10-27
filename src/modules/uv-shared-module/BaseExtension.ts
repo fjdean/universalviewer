@@ -28,7 +28,7 @@ class BaseExtension implements IExtension {
     bootstrapper: BootStrapper;
     clickThroughDialogue: ClickThroughDialogue;
     config: any;
-    currentRange: Manifesto.IRange;
+    //currentRangePath: string;
     domain: string;
     embedDomain: string;
     embedHeight: number;
@@ -948,7 +948,43 @@ class BaseExtension implements IExtension {
         return [canvasIndex];
     }
 
-    getExternalResources(resources?: Manifesto.IExternalResource[]): Promise<Manifesto.IExternalResource[]> {
+    public getCurrentCanvases(): Manifesto.ICanvas[] {
+        var indices: number[] = this.getPagedIndices(this.helper.canvasIndex);
+        var canvases: Manifesto.ICanvas[] = [];
+        
+        for (var i = 0; i < indices.length; i++) {
+            var index: number = indices[i];
+            var canvas: Manifesto.ICanvas = this.helper.getCanvasByIndex(index);
+            canvases.push(canvas);
+        }
+        
+        return canvases;
+    }
+
+    public getCanvasLabels(label: string): string {
+        var indices: number[] = this.getPagedIndices();
+        var labels: string = "";
+
+        if (indices.length === 1) {
+            labels = label;
+        } else {
+            for (var i = 1; i <= indices.length; i++) {
+                if (labels.length) labels += ",";
+                labels += label + " " + i;
+            }
+        }
+
+        return labels;
+    }
+
+    public getCurrentCanvasRange(): Manifesto.IRange {
+        //var rangePath: string = this.currentRangePath ? this.currentRangePath : '';
+        //var range: Manifesto.IRange = this.helper.getCanvasRange(this.helper.getCurrentCanvas(), rangePath);
+        var range: Manifesto.IRange = this.helper.getCanvasRange(this.helper.getCurrentCanvas());
+        return range;
+    }
+
+    public getExternalResources(resources?: Manifesto.IExternalResource[]): Promise<Manifesto.IExternalResource[]> {
 
         var indices = this.getPagedIndices();
         var resourcesToLoad = [];
@@ -976,7 +1012,7 @@ class BaseExtension implements IExtension {
         var storageStrategy: string = this.config.options.tokenStorage;
 
         return new Promise<Manifesto.IExternalResource[]>((resolve) => {
-            manifesto.loadExternalResources(
+            manifesto.Utils.loadExternalResources(
                 resourcesToLoad,
                 storageStrategy,
                 this.clickThrough,

@@ -448,9 +448,6 @@ class Extension extends BaseExtension implements ISeadragonExtension {
         }
 
         this.viewCanvas(canvasIndex);
-
-        // reset currentRange
-        this.currentRange = null;
     }
 
     getViewer() {
@@ -485,9 +482,9 @@ class Extension extends BaseExtension implements ISeadragonExtension {
     }
 
     viewRange(path: string): void {
-        var range = this.helper.getRangeByPath(path);
+        //this.currentRangePath = path;
+        var range: Manifesto.IRange = this.helper.getRangeByPath(path);
         if (!range) return;
-        this.currentRange = range;
         var canvasId: string = range.getCanvasIds()[0];
         var index: number = this.helper.getCanvasIndexById(canvasId);
         this.viewPage(index);
@@ -569,7 +566,7 @@ class Extension extends BaseExtension implements ISeadragonExtension {
         var bookmark: Bookmark = new Bookmark();
 
         bookmark.index = this.helper.canvasIndex;
-        bookmark.label = canvas.getLabel();
+        bookmark.label = Manifesto.TranslationCollection.getValue(canvas.getLabel());
         bookmark.path = this.getCroppedImageUri(canvas, this.getViewer());
         bookmark.thumb = canvas.getCanonicalImageUri(this.config.options.bookmarkThumbWidth);
         bookmark.title = this.helper.getLabel();
@@ -797,7 +794,7 @@ class Extension extends BaseExtension implements ISeadragonExtension {
                     id += '/';
                 }
 
-                if (manifesto.isImageProfile(service.getProfile())){
+                if (manifesto.Utils.isImageProfile(service.getProfile())){
                     infoUri = id + 'info.json';
                 }
             }
